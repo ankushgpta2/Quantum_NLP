@@ -1,14 +1,14 @@
+import pandas as pd
 
 
-
-class DataSets():
+class DataSets:
     def __init__(self):
         self.data = {'train': {}, 'dev': {}, 'test': {}}
 
     def get_default_lambeq_data(self):
         """ Text Classification
         """
-        # explictly specify the data
+        # explicitly specify the data
         data_paths = ['datasets/mc_train_data.txt', 'datasets/mc_dev_data.txt', 'datasets/mc_test_data.txt']
         for path in data_paths:
             labels, sentences = [], []
@@ -28,13 +28,15 @@ class DataSets():
                       'datasets/news_classification_true_false/test.csv']
         for path in data_paths:
             df = pd.read_csv(path)
-            self.place_data_in_dict(path=path, text=df['text'][:].to_list(), labels=df['label'][:].to_list())
-
-    def get_squad_data(self):
-        """ Text Answer to Question
-        """
+            df = df.sample(frac=1).reset_index(drop=True)
+            self.place_data_in_dict(path=path, text=df['title'][:10].to_list(), labels=df['label'][:10].to_list())
 
     def place_data_in_dict(self, path, labels, text):
+        # clean the text
+        [string.replace('"', '') for string in text]
+        [string.replace("'", "") for string in text]
+        # for i, string in enumerate(text):
+            # text[i] = "'" + string + "'"
         if 'train' in path or 'training' in path:
             key = 'train'
         elif 'dev' in path or 'val' in path or 'validation' in path or 'valid' in path:

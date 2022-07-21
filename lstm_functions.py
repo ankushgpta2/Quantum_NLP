@@ -1,64 +1,80 @@
-import os
-import sys
 # torch packages
 import torch
 import torch.nn as nn
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
-import torch.optim as optim
-# other core packages
+from torch import autograd, optim
+import torch.nn.functional as F
+from datasets import *
 import numpy as np
-import pandas as pd
-from sklearn.model_selection import train_test_split
-import matplotlib.pyplot as plt
-import pandas as pd
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-import seaborn as sns
 
 
 class LSTMProcesses(nn.Module):
-    def __init__(self, data_flag, dimension=128):
+    def __init__(self, context_size, embedding_dim, vocab_size):
         super(LSTMProcesses, self).__init__()
         # prepare the label and text fields
-        self.datasets = DataSets()
-        self.data_flag = data_flag
+        self.embedding_dim = embedding_dim
+        self.vocab_size = vocab_size
         # neural net properties
-        self.embedding = nn.Embedding(len(text_field.vocab), 300)
-        self.dimension = dimension
-        self.lstm = nn.LSTM(input_size=300,
-                            hidden_size=dimension,
-                            num_layers=1,
-                            batch_first=True,
-                            bidirectional=True)
-        self.drop = nn.Dropout(p=0.5)
-        self.fc = nn.Linear( 2 *dimension, 1)
+        self.word_embeddings = nn.Embedding(self.vocab_size, self.embedding_dim)
+        self.linear1 = nn.Linear(context_size * self.embedding_dim, 128)
+        self.linear2 = nn.Linear(128, self.vocab_size)
+        self.lstm = nn.LSTM(embedding_dim, 2, bidirectional=True)
 
-    def forward(self, text, text_len):
-        text_emb = self.embedding(text)
-        packed_input = pack_padded_sequence(text_emb, text_len, batch_first=True, enforce_sorted=False)
-        packed_output, _ = self.lstm(packed_input)
-        output, _ = pad_packed_sequence(packed_output, batch_first=True)
-        out_forward = output[range(len(output)), text_len - 1, :self.dimension]
-        out_reverse = output[:, 0, self.dimension:]
-        out_reduced = torch.cat((out_forward, out_reverse), 1)
-        text_fea = self.drop(out_reduced)
-        text_fea = self.fc(text_fea)
-        text_fea = torch.squeeze(text_fea, 1)
-        text_out = torch.sigmoid(text_fea)
-        return text_out
+    def forward(self, input):
+        embeds = self.word_embeddings(input).view((1, -1))
+        lstm_out, _ = self.lstm(embeds.view(len(input), 1, -1))
+        # out = F.relu(self.linear1(embeds))
+        # out = self.linear2(out)
+        log_probs = F.log_softmax(lstm_out, dim=1)
+        print(np.shape(log_probs))
+        return log_probs
 
-    def prep_data(self):
-        # set up fields
-        label_field = Field(sequential=False, use_vocab=False, batch_first=True, dtype=torch.float)
-        text_field = Field(tokenize='spacy', lower=True, include_lengths=True, batch_first=True)
-        text_field.build_vocab(self.datasets.data['train']['text'], min_freq=3)
-        # read in all of the data
-        if self.data_flag == 'lambeq_default':
-            self.datasets.get_default_lambeq_data()
-        elif self.data_flag == 'news_data':
-            self.datasets.get_news_data()
-        # set up iterators
-        for key in self.datasets.data.keys():
-            # combine data and labels
-            iter = BucketIterator(self.datasets.data[key]['text'], batch_size=32, sort_key=lambda x: len(x.text),
-                                  device=device, sort=True, sort_within_batch=True)
-            self.datasets.data[key]['iterator'] = iter
+
+class RunLSTM:
+    def __init__(self, dataset, embedding_dim, context_size):
+        self.dataset = dataset
+        self.embedding_dim = embedding_dim
+        self.context_size = context_size
+
+
+    @staticmethod
+    def convert_to_wordidx(sentence):
+        vocab = set(sentence)
+        print(vocab)
+        word_to_ix = {word: i for i, word in enumerate(vocab)}
+        return word_to_ix, vocab
+
+
+    @staticmethod
+    def get_ngram(sentence):
+        CONTEXT_SIZE = 2
+        ngrams = [
+            (
+                [sentence[i - j - 1] for j in range(CONTEXT_SIZE)],
+                sentence[i]
+            )
+            for i in range(CONTEXT_SIZE, len(sentence))
+        ]
+        return ngrams
+
+
+    def main(self):
+        sentence = self.dataset['train']['text'][0]
+        word_to_ix, vocab = self.convert_to_wordidx(sentence=sentence.split())
+        ngrams = self.get_ngram(sentence=sentence.split())
+        model = LSTMProcesses(context_size=self.context_size, embedding_dim=self.embedding_dim, vocab_size=len(vocab))
+        losses = []
+        loss_function = nn.NLLLoss()
+        optimizer = optim.SGD(model.parameters(), lr=0.001)
+        for epoch in range(1, 100+1):
+            total_loss = 0
+            for context, target in ngrams:
+                context_idxs = torch.tensor([word_to_ix[w] for w in context], dtype=torch.long)
+                model.zero_grad()
+                log_probs = model(context_idxs)
+                loss = loss_function(log_probs, torch.tensor([word_to_ix[target]], dtype=torch.long))
+                loss.backward()
+                optimizer.step()
+                total_loss += loss.item()
+            print(str(epoch) + '/' + str(100) + ':  ' + str(total_loss))
+            losses.append(total_loss)
+        print(losses)

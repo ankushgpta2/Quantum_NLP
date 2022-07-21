@@ -17,13 +17,14 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
-import pandas as pd
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import seaborn as sns
+import datetime
+from datetime import date, datetime
 
 
 class LambeqProcesses(object):
-    def __init__(self, data_flag):
+    def __init__(self, dataset, data_flag):
         self.reader = BobcatParser(verbose='text')
         self.ansatz = IQPAnsatz({AtomicType.NOUN: 1, AtomicType.SENTENCE: 1},
                    n_layers=1, n_single_qubit_params=3)
@@ -34,15 +35,10 @@ class LambeqProcesses(object):
         self.epochs = 10
         self.optimizer = SPSAOptimizer
         self.batch_size = 30
-        self.datasets = DataSets()
+        self.dataset = dataset
         self.data_flag = data_flag
 
     def main(self):
-        # read in all of the data
-        if self.data_flag == 'lambeq_default':
-            self.datasets.get_default_lambeq_data()
-        elif self.data_flag == 'news_data':
-            self.datasets.get_news_data()
         # use parser and circuit creator
         self.get_diagram_and_circuit()
         # preparation stuff for training
@@ -54,14 +50,14 @@ class LambeqProcesses(object):
 
     # for the parser
     def get_diagram_and_circuit(self):
-        for key in self.datasets.data.keys():
-            raw_diagram = self.reader.sentences2diagrams(self.datasets.data[key]['text'])
+        for key in self.dataset.keys():
+            raw_diagram = self.reader.sentences2diagrams(self.dataset[key]['text'])
             diagram = [remove_cups(diagram) for diagram in raw_diagram]
             circuit = [self.ansatz(sub_diagram) for sub_diagram in diagram]
             # diagram[0].draw()
             # circuit[0].draw()
-            self.datasets.data[key]['diagram'] = diagram
-            self.datasets.data[key]['circuit'] = circuit
+            self.dataset[key]['diagram'] = diagram
+            self.dataset[key]['circuit'] = circuit
 
     # intializing necessary things for training
     def prep_for_train(self):
@@ -70,22 +66,22 @@ class LambeqProcesses(object):
             'compilation': self.backend.default_compilation_pass(2),
             'shots': 8192
         }
-        model = self.model.from_diagrams(self.datasets.data['train']['circuit']+self.datasets.data['dev']
-                        ['circuit']+self.datasets.data['test']['circuit'], backend_config=backend_config)
+        model = self.model.from_diagrams(self.dataset['train']['circuit']+self.dataset['dev']
+                        ['circuit']+self.dataset['test']['circuit'], backend_config=backend_config)
         trainer = QuantumTrainer(
             model,
             loss_function=self.loss_function,
             epochs=self.epochs,
             optimizer=self.optimizer,
-            optim_hyperparams={'a': 0.05, 'c': 0.06, 'A':0.01*self.epochs},
+            optim_hyperparams={'a': 0.05, 'c': 0.06, 'A': 0.01*self.epochs},
             evaluate_functions={'acc': self.acc_function},
             evaluate_on_train=True,
             verbose = 'text',
             seed=0
         )
-        train_dataset = Dataset(self.datasets.data['train']['circuit'], self.datasets.data['train']['labels'],
+        train_dataset = Dataset(self.dataset['train']['circuit'], self.dataset['train']['labels'],
                         batch_size=self.batch_size)
-        val_dataset = Dataset(self.datasets.data['dev']['circuit'], self.datasets.data['dev']['labels'],
+        val_dataset = Dataset(self.dataset['dev']['circuit'], self.dataset['dev']['labels'],
                         shuffle=False)
         return train_dataset, val_dataset, trainer, model
 
@@ -100,10 +96,19 @@ class LambeqProcesses(object):
         ax1.set_title('Training Set'), ax2.set_title('Development Set'), ax3.set_xlabel('Epochs'),
         ax4.set_xlabel('Epochs'), ax1.set_ylabel('Loss'), ax3.set_ylabel('Accuracy')
         plt.suptitle('Loss and Accuracy Performance on Train/Dev Sets', fontweight='bold', fontsize=14)
+        # save everything
         if os.path.isdir('figures') is False:
             os.mkdir('figures')
-        plt.savefig('figures/loss_acc_lambeq.png')
-        test_acc = self.acc_function(model(self.datasets.data['test']['circuit']),
-                        self.datasets.data['test']['labels'])
+        if os.path.isdir('figures/lambeq') is False:
+            os.mkdir('figures/lambeq')
+        today = date.today()
+        current_date = str(today.strftime("%m/%d/%y")).replace("/", "_")
+        now = datetime.now()
+        current_time = str(now.strftime("%H:%M:%S"))
+        if os.path.isdir('figures/lambeq/' + current_date) is False:
+            os.mkdir('figures/lambeq/' + current_date)
+        plt.savefig('figures/lambeq/' + current_date + '/loss_acc_' + current_time + '_' + str(self.data_flag) + '.png')
+        test_acc = self.acc_function(model(self.dataset['test']['circuit']), self.dataset['test']['labels'])
         print('Test accuracy:', test_acc)
         plt.show()
+
