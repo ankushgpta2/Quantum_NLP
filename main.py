@@ -4,6 +4,11 @@ from lambeq_functions import *
 from lstm_functions import *
 from datasets import *
 import argparse
+try:
+    import lightrun
+    lightrun.enable(company_key='ea342b0a-669a-4e63-94f6-1a412dfb2b98')
+except ImportError as e:
+    print("Error importing Lightrun: ", e)
 
 
 # read in parameters
@@ -75,3 +80,4 @@ class MainRunner:
 
 M = MainRunner()
 M.run_main()
+

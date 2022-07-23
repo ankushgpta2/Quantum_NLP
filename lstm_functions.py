@@ -35,14 +35,12 @@ class RunLSTM:
         self.embedding_dim = embedding_dim
         self.context_size = context_size
 
-
     @staticmethod
     def convert_to_wordidx(sentence):
         vocab = set(sentence)
         print(vocab)
         word_to_ix = {word: i for i, word in enumerate(vocab)}
         return word_to_ix, vocab
-
 
     @staticmethod
     def get_ngram(sentence):
@@ -55,7 +53,6 @@ class RunLSTM:
             for i in range(CONTEXT_SIZE, len(sentence))
         ]
         return ngrams
-
 
     def main(self):
         sentence = self.dataset['train']['text'][0]
