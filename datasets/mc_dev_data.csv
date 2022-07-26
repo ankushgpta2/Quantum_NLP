@@ -1,0 +1,31 @@
+,labels,text
+0,1,skillful person prepares application .
+1,0,man prepares tasty meal .
+2,0,man prepares tasty sauce .
+3,0,person bakes tasty meal .
+4,1,man prepares useful program .
+5,1,man runs program .
+6,0,person prepares dinner .
+7,0,man bakes sauce .
+8,1,woman prepares software .
+9,1,person prepares useful software .
+10,1,skillful person debugs program .
+11,1,person debugs application .
+12,0,person cooks tasty dinner .
+13,1,skillful person debugs software .
+14,0,woman bakes tasty sauce .
+15,1,skillful woman runs software .
+16,0,skillful person prepares sauce .
+17,1,person debugs useful program .
+18,1,man runs application .
+19,0,person prepares tasty dinner .
+20,1,woman debugs useful software .
+21,1,man runs useful application .
+22,0,woman bakes tasty dinner .
+23,1,person prepares program .
+24,1,woman debugs useful application .
+25,1,skillful woman prepares application .
+26,1,man debugs application .
+27,1,woman prepares useful application .
+28,1,man debugs useful program .
+29,0,woman cooks sauce .

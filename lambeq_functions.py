@@ -1,14 +1,13 @@
 import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
+import matplotlib.pyplot as plt
+import numpy as np
+import datetime
+from datetime import date, datetime
 # lambeq related packages
 from lambeq import BobcatParser, remove_cups, AtomicType, IQPAnsatz, TketModel, QuantumTrainer, SPSAOptimizer, \
     Dataset
 from pytket.extensions.qiskit import AerBackend
-# other core packages
-import numpy as np
-import matplotlib.pyplot as plt
-import datetime
-from datetime import date, datetime
 
 
 class LambeqProcesses(object):
@@ -35,6 +34,8 @@ class LambeqProcesses(object):
         trainer.fit(train_dataset, val_dataset, logging_step=12)
         # plot the performance
         self.plot_performance(trainer, model)
+        # clear the run logs generated
+        os.rmdir('runs')
 
     # for the parser
     def get_diagram_and_circuit(self):

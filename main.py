@@ -1,7 +1,7 @@
+import argparse
+from datasets import DataSets
 from lambeq_functions import LambeqProcesses
 from lstm_functions import RunLSTM
-from datasets import DataSets
-import argparse
 
 """
 try:
@@ -26,7 +26,7 @@ def get_args():
     parser.add_argument('--flag_for_lambeq_default', type=bool, default=False)
     parser.add_argument('--flag_for_lambeq_news', type=bool, default=False)
     parser.add_argument('--flag_for_lstm_default', type=bool, default=False)
-    parser.add_argument('--flag_for_lstm_news', type=bool, default=True)
+    parser.add_argument('--flag_for_lstm_news', type=bool, default=False)
     return parser
 
 

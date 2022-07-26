@@ -31,7 +31,7 @@ class DataSets:
         for path in data_paths:
             df = pd.read_csv(path)
             df = df.sample(frac=1).reset_index(drop=True)
-            self.place_data_in_dict(path=path, text=df['title'][:10].to_list(), labels=df['label'][:10].to_list())
+            self.place_data_in_dict(path=path, text=df['title'].to_list(), labels=df['label'].to_list())
 
         self.convert_dict_to_csv(path_for_csv='datasets/news_classification_true_false/full.csv')
 
