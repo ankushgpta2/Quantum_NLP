@@ -1,24 +1,12 @@
 import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
-# os.environ["TOKENIZERS_PARALLELISM"] = "false"
-import sys
 # lambeq related packages
 from lambeq import BobcatParser, remove_cups, AtomicType, IQPAnsatz, TketModel, QuantumTrainer, SPSAOptimizer, \
     Dataset
 from pytket.extensions.qiskit import AerBackend
-# torch packages
-import torch
-from torchtext.data import Field, TabularDataset, BucketIterator
-import torch.nn as nn
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
-import torch.optim as optim
 # other core packages
 import numpy as np
-import pandas as pd
-from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-import seaborn as sns
 import datetime
 from datetime import date, datetime
 
@@ -32,13 +20,13 @@ class LambeqProcesses(object):
         self.model = TketModel
         self.loss_function = lambda y_hat, y: -np.sum(y * np.log(y_hat)) / len(y)  # binary cross-entropy loss
         self.acc_function = lambda y_hat, y: np.sum(np.round(y_hat) == y) / len(y) / 2  # half due to double-counting
-        self.epochs = 10
+        self.epochs = 100
         self.optimizer = SPSAOptimizer
         self.batch_size = 30
         self.dataset = dataset
         self.data_flag = data_flag
 
-    def main(self):
+    def train(self):
         # use parser and circuit creator
         self.get_diagram_and_circuit()
         # preparation stuff for training

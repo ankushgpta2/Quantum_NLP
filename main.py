@@ -1,14 +1,15 @@
-import os
-import sys
-from lambeq_functions import *
-from lstm_functions import *
-from datasets import *
+from lambeq_functions import LambeqProcesses
+from lstm_functions import RunLSTM
+from datasets import DataSets
 import argparse
+
+"""
 try:
     import lightrun
     lightrun.enable(company_key='ea342b0a-669a-4e63-94f6-1a412dfb2b98')
 except ImportError as e:
     print("Error importing Lightrun: ", e)
+"""
 
 
 # read in parameters
@@ -24,8 +25,8 @@ def get_args():
     # general arguments and default values
     parser.add_argument('--flag_for_lambeq_default', type=bool, default=False)
     parser.add_argument('--flag_for_lambeq_news', type=bool, default=False)
-    parser.add_argument('--flag_for_lstm_default', type=bool, default=True)
-    parser.add_argument('--flag_for_lstm_news', type=bool, default=False)
+    parser.add_argument('--flag_for_lstm_default', type=bool, default=False)
+    parser.add_argument('--flag_for_lstm_news', type=bool, default=True)
     return parser
 
 
@@ -35,34 +36,31 @@ class MainRunner:
         # lambeq dataset
         D = DataSets()
         D.get_default_lambeq_data()
-        self.lambeq_default_data = D.data
+        self.default_data_for_lambeq = D.data
         # news data
         D = DataSets()
         D.get_news_data()
-        self.news_data = D.data
-        # for data_flag
-        self.data_flag_default = 'lambeq_default_data'
-        self.data_flag_news = 'news_data'
+        self.news_data_for_lambeq = D.data
 
     def run_lambeq_on_default(self):
         # run lambeq on default data
-        QP = LambeqProcesses(dataset=self.lambeq_default_data, data_flag=self.data_flag_default)
-        QP.main()
+        QP = LambeqProcesses(dataset=self.default_data_for_lambeq, data_flag='lambeq_default_data')
+        QP.train()
 
     def run_lambeq_on_news(self):
         # run lambeq on news data
-        QP = LambeqProcesses(dataset=self.news_data, data_flag=self.data_flag_news)
-        QP.main()
+        QP = LambeqProcesses(dataset=self.news_data_for_lambeq, data_flag='news_data')
+        QP.train()
 
     def run_lstm_on_default(self):
         # run LSTM on default data
-        LSTMP = RunLSTM(dataset=self.lambeq_default_data, embedding_dim=10, context_size=2)
-        LSTMP.main()
+        LSTMP = RunLSTM(embedding_dim=10, context_size=2, data_flag='lambeq_default_data', vocab_size=20000, batch_size=16, hidden_dim=256, num_classes=2, num_epochs=100)
+        LSTMP.train()
 
     def run_lstm_on_news(self):
         # run LSTM on news data
-        LSTMP = RunLSTM(dataset=self.news_data, data_flag=self.data_flag_news)
-        LSTMP.main()
+        LSTMP = RunLSTM(embedding_dim=10, context_size=2, data_flag='news_data', vocab_size=20000, batch_size=16, hidden_dim=256, num_classes=2, num_epochs=100)
+        LSTMP.train()
 
     def run_main(self):
         if self.parameters['flag_for_lambeq_default'] is True:
