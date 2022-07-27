@@ -1,8 +1,9 @@
 import os
 os.environ['KMP_DUPLICATE_LIB_OK']='True'
+import datetime
 import matplotlib.pyplot as plt
 import numpy as np
-import datetime
+import shutil
 from datetime import date, datetime
 # lambeq related packages
 from lambeq import BobcatParser, remove_cups, AtomicType, IQPAnsatz, TketModel, QuantumTrainer, SPSAOptimizer, \
@@ -11,7 +12,7 @@ from pytket.extensions.qiskit import AerBackend
 
 
 class LambeqProcesses(object):
-    def __init__(self, dataset, data_flag):
+    def __init__(self, dataset, data_flag, batch_size, epochs):
         self.reader = BobcatParser(verbose='text')
         self.ansatz = IQPAnsatz({AtomicType.NOUN: 1, AtomicType.SENTENCE: 1},
                    n_layers=1, n_single_qubit_params=3)
@@ -19,9 +20,9 @@ class LambeqProcesses(object):
         self.model = TketModel
         self.loss_function = lambda y_hat, y: -np.sum(y * np.log(y_hat)) / len(y)  # binary cross-entropy loss
         self.acc_function = lambda y_hat, y: np.sum(np.round(y_hat) == y) / len(y) / 2  # half due to double-counting
-        self.epochs = 100
+        self.epochs = epochs
         self.optimizer = SPSAOptimizer
-        self.batch_size = 30
+        self.batch_size = batch_size
         self.dataset = dataset
         self.data_flag = data_flag
 
@@ -35,7 +36,7 @@ class LambeqProcesses(object):
         # plot the performance
         self.plot_performance(trainer, model)
         # clear the run logs generated
-        os.rmdir('runs')
+        shutil.rmtree('runs', ignore_errors=False, onerror=None)
 
     # for the parser
     def get_diagram_and_circuit(self):

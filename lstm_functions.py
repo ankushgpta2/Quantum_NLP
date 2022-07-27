@@ -25,18 +25,20 @@ class LSTMProcesses(nn.Module):
 
 
 class RunLSTM:
-    def __init__(self, data_flag, embedding_dim, context_size, vocab_size, batch_size, hidden_dim, num_classes, num_epochs):
+    def __init__(self, data_flag, embedding_dim, vocab_size, batch_size, lr, hidden_dim, num_classes, num_epochs, splits):
         # passed in variables
         self.data_flag = data_flag
         self.embedding_dim = embedding_dim
-        self.context_size = context_size
         self.vocab_size = vocab_size
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.batch_size = batch_size
         self.hidden_dim = hidden_dim
         self.num_classes = num_classes
         self.num_epochs = num_epochs
-        # self.L = LSTMProcesses(context_size=self.context_size, embedding_dim=self.embedding_dim, vocab_size=20000)
+        self.lr = lr
+        self.train_split = splits['train']
+        self.val_split = splits['val']
+        self.test_split = splits['test']
         # just instantiate a few other variables
         self.train_loader = None
         self.valid_loader = None
@@ -66,10 +68,10 @@ class RunLSTM:
 
         # now split the data
         train_data, test_data = dataset.split(
-            split_ratio=[0.8, 0.2],
+            split_ratio=[1-self.test_split, self.test_split],
         )
         train_data, valid_data = train_data.split(
-            split_ratio=[0.85, 0.15],
+            split_ratio=[self.train_split, self.val_split],
         )
 
         # build the necessary vocab (just to see)
@@ -92,7 +94,7 @@ class RunLSTM:
                               hidden_dim=self.hidden_dim,
                               output_dim=self.num_classes
                               )
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.0001)
+        optimizer = torch.optim.Adam(model.parameters(), lr=self.lr)
         model = model.to(self.device)
 
         for epoch in range(1, self.num_epochs+1):
@@ -141,4 +143,3 @@ class RunLSTM:
         tensor = (torch.LongTensor(indexed).to(self.device)).unsqueeze(1)
         prediction = torch.nn.functional.softmax(model(tensor), dim=1)
         return prediction[0][0].item()
-
