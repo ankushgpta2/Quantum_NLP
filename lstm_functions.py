@@ -1,6 +1,5 @@
 import os
 import stat
-import warnings
 import copy
 import matplotlib.pyplot as plt
 import numpy as np
@@ -51,6 +50,9 @@ class RunLSTM:
         self.test_loader = None
         self.label_tokenizer = None
         self.text_tokenizer = None
+        self.best_model = None
+        self.best_acc = 0.0
+        self.best_epoch = None
         self.train_loss_holder, self.val_acc_holder, self.val_loss_holder = [], [], []
 
     def prep_data(self):
@@ -106,7 +108,6 @@ class RunLSTM:
         for epoch in range(1, self.num_epochs+1):
             model.train()
             avg_loss = 0.0
-            best_acc = 0.0
             for batch_idx, batch in enumerate(self.train_loader):
                 text, labels = batch.text.to(self.device), batch.labels.to(self.device)
                 logits = model(text)
@@ -118,34 +119,32 @@ class RunLSTM:
             self.train_loss_holder.append(avg_loss)
             # perform validation after each epoch
             with torch.set_grad_enabled(False):
-                accuracy, val_loss = self.validation(model=model)
+                accuracy, val_loss = self.eval(model=model, data_loader=self.valid_loader)
                 self.val_acc_holder.append(accuracy)
                 self.val_loss_holder.append(val_loss)
-                if accuracy > best_acc:
-                    best_acc = accuracy
-                    best_epoch = epoch
-                    best_model = copy.deepcopy(model)
+                if accuracy > self.best_acc:
+                    self.best_acc = accuracy
+                    self.best_epoch = epoch
+                    self.best_model = copy.deepcopy(model)
                 print(f'{epoch}/{self.num_epochs} ----> train loss = {np.round(avg_loss, 9)} ----> val loss = {np.round(val_loss, 9)} '
                   f'---> accuracy = {np.round(accuracy, 2)}')
-        self.save_best_model(
-            best_acc=best_acc,
-            best_epoch=best_epoch,
-            best_model=best_model,
-        )
+        test_acc, test_loss = self.eval(model=self.best_model, data_loader=self.test_loader)
+        print(f'\nFor Best Model, Test Accuracy = {np.round(test_acc, 1)} and Test Loss = {np.round(test_loss, 5)}')
+        self.save_best_model()
         self.plot_results()
 
-    def validation(self, model):
+    def eval(self, model, data_loader):
         with torch.no_grad():
-            correct_val_pred, total, avg_val_loss = 0, 0, 0
-            for i, (val_text, val_labels) in enumerate(self.valid_loader):
-                val_text, val_labels = val_text.to(self.device), val_labels.float().to(self.device)
-                val_logits = model(val_text)
-                _, predicted_labels = torch.max(val_logits, 1)
-                total += val_labels.size(0)
-                correct_val_pred = (predicted_labels == val_labels).sum()
-                loss = F.cross_entropy(val_logits, val_labels.long())
-                avg_val_loss += loss.item()
-        return (correct_val_pred.float()/total*100).numpy(), avg_val_loss
+            correct_pred, total, avg_loss = 0, 0, 0
+            for i, (text, labels) in enumerate(data_loader):
+                text, labels = text.to(self.device), labels.float().to(self.device)
+                logits = model(text)
+                _, predicted_labels = torch.max(logits, 1)
+                total += labels.size(0)
+                correct_pred = (predicted_labels == labels).sum()
+                loss = F.cross_entropy(logits, labels.long())
+                avg_loss += loss.item()
+        return (correct_pred.float()/total*100).numpy(), avg_loss
 
     def plot_results(self):
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True, sharey='row', figsize=(10, 6))
@@ -156,14 +155,13 @@ class RunLSTM:
         plt.suptitle('Loss and Accuracy Performance with LSTM', fontweight='bold', fontsize=14)
         plt.show()
 
-    @staticmethod
-    def save_best_model(best_model, best_epoch, best_acc):
+    def save_best_model(self):
         name_of_dir = 'best_model'
         path_for_file = Path(f'{name_of_dir}/model.pt')
         if os.path.isdir(name_of_dir) is False:
             os.mkdir(name_of_dir)
             os.chmod(name_of_dir, stat.S_IRWXO)
-        torch.save({'acc': best_acc, 'epoch': best_epoch, 'model': best_model}, path_for_file)
+        torch.save({'acc': self.best_acc, 'epoch': self.best_epoch, 'model': self.best_model}, path_for_file)
         try:
             assert torch.load(path_for_file)
         except:

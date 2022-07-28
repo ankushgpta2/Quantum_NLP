@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 
@@ -45,6 +46,12 @@ class DataSets:
             key = 'dev'
         elif 'test' in path:
             key = 'test'
+        # check if the labels and text are the same size
+        if len(labels) != len(text):
+            raise ValueError(f'Labels and text must have the same length')
+        # random permutation to labels and text (in unison)
+        p = np.random.permutation(len(labels))
+        labels, text = np.array(labels)[p.astype(int)], np.array(text)[p.astype(int)]
         self.data[key]['labels'] = labels
         self.data[key]['text'] = text
 

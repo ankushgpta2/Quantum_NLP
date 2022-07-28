@@ -23,9 +23,9 @@ def get_args():
     # initialize parser
     parser = argparse.ArgumentParser(description="Parameters For Neural Nets")
     # which models and datasets to run
-    parser.add_argument('--flag_for_lambeq_default', type=bool, default=True)
+    parser.add_argument('--flag_for_lambeq_default', type=bool, default=False)
     parser.add_argument('--flag_for_lambeq_news', type=bool, default=False)
-    parser.add_argument('--flag_for_lstm_default', type=bool, default=False)
+    parser.add_argument('--flag_for_lstm_default', type=bool, default=True)
     parser.add_argument('--flag_for_lstm_news', type=bool, default=False)
     # for the lambeq model
     parser.add_argument('--lambeq_batch_size', type=int, default=16)
@@ -56,7 +56,8 @@ class MainRunner:
         D.get_news_data()
         self.news_data_for_lambeq = D.data
         # get vars for training/eval of the models
-        self.splits = {'train': self.parameters['lstm_train_split'], 'val': self.parameters['lstm_val_split'], 'test': self.parameters['lstm_test_split']}
+        self.splits = {'train': self.parameters['lstm_train_split'], 'val': self.parameters['lstm_val_split'],
+                       'test': self.parameters['lstm_test_split']}
 
     def run_lambeq_on_default(self):
         # run lambeq on default data
