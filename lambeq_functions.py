@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import shutil
 from datetime import date, datetime
-# lambeq related packages
 from lambeq import BobcatParser, remove_cups, AtomicType, IQPAnsatz, TketModel, QuantumTrainer, SPSAOptimizer, \
     Dataset
 from pytket.extensions.qiskit import AerBackend
@@ -32,7 +31,7 @@ class LambeqProcesses(object):
         # preparation stuff for training
         train_dataset, val_dataset, trainer, model = self.prep_for_train()
         # run the training on generated circuit representations + labels
-        trainer.fit(train_dataset, val_dataset, logging_step=12)
+        trainer.fit(train_dataset, val_dataset, logging_step=1)
         # plot the performance
         self.plot_performance(trainer, model)
         # clear the run logs generated
@@ -49,7 +48,7 @@ class LambeqProcesses(object):
             self.dataset[key]['diagram'] = diagram
             self.dataset[key]['circuit'] = circuit
 
-    # intializing necessary things for training
+    # initializing necessary things for training
     def prep_for_train(self):
         backend_config = {
             'backend': self.backend,
@@ -66,7 +65,7 @@ class LambeqProcesses(object):
             optim_hyperparams={'a': 0.05, 'c': 0.06, 'A': 0.01*self.epochs},
             evaluate_functions={'acc': self.acc_function},
             evaluate_on_train=True,
-            verbose = 'text',
+            verbose='text',
             seed=0
         )
         train_dataset = Dataset(self.dataset['train']['circuit'], self.dataset['train']['labels'],
@@ -94,10 +93,10 @@ class LambeqProcesses(object):
         today = date.today()
         current_date = str(today.strftime("%m/%d/%y")).replace("/", "_")
         now = datetime.now()
-        current_time = str(now.strftime("%H:%M:%S"))
+        current_time = str(now.strftime("%H_%M_%S"))
         if os.path.isdir('figures/lambeq/' + current_date) is False:
-            os.mkdir('figures/lambeq/' + current_date)
-        plt.savefig('figures/lambeq/' + current_date + '/loss_acc_' + current_time + '_' + str(self.data_flag) + '.png')
+            os.mkdir(f'figures/lambeq/{current_date}')
+        plt.savefig(f'figures/lambeq/{current_date}/loss_acc_{current_time}_{self.data_flag}.png')
         test_acc = self.acc_function(model(self.dataset['test']['circuit']), self.dataset['test']['labels'])
         print('Test accuracy:', test_acc)
         plt.show()

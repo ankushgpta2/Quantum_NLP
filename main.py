@@ -23,13 +23,13 @@ def get_args():
     # initialize parser
     parser = argparse.ArgumentParser(description="Parameters For Neural Nets")
     # which models and datasets to run
-    parser.add_argument('--flag_for_lambeq_default', type=bool, default=False)
+    parser.add_argument('--flag_for_lambeq_default', type=bool, default=True)
     parser.add_argument('--flag_for_lambeq_news', type=bool, default=False)
     parser.add_argument('--flag_for_lstm_default', type=bool, default=False)
     parser.add_argument('--flag_for_lstm_news', type=bool, default=False)
     # for the lambeq model
     parser.add_argument('--lambeq_batch_size', type=int, default=16)
-    parser.add_argument('--lambeq_epochs', type=int, default=100)
+    parser.add_argument('--lambeq_epochs', type=int, default=40)
     # for the lstm model
     parser.add_argument('--lstm_batch_size', type=int, default=16)
     parser.add_argument('--lstm_epochs', type=int, default=100)
