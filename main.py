@@ -60,28 +60,34 @@ class MainRunner:
 
     def run_lambeq_on_default(self):
         # run lambeq on default data
-        QP = LambeqProcesses(dataset=self.default_data_for_lambeq, data_flag='lambeq_default_data', batch_size=self.parameters['lambeq_batch_size'],
-                             epochs=self.parameters['lambeq_epochs'])
+        QP = LambeqProcesses(parameters=self.parameters,
+                             dataset=self.default_data_for_lambeq,
+                             data_flag='lambeq_default_data'
+                             )
         QP.train()
 
     def run_lambeq_on_news(self):
         # run lambeq on news data
-        QP = LambeqProcesses(dataset=self.news_data_for_lambeq, data_flag='news_data', batch_size=self.parameters['lambeq_batch_size'],
-                             epochs=self.parameters['lambeq_epochs'])
+        QP = LambeqProcesses(parameters=self.parameters,
+                             dataset=self.news_data_for_lambeq,
+                             data_flag='news_data'
+                             )
         QP.train()
 
     def run_lstm_on_default(self):
         # run LSTM on default data
-        LSTMP = RunLSTM(embedding_dim=self.parameters['lstm_embedding_dim'], data_flag='lambeq_default_data', vocab_size=self.parameters['lstm_vocab_size'],
-                        batch_size=self.parameters['lstm_batch_size'], hidden_dim=self.parameters['lstm_hidden_dim'], num_classes=self.parameters['lstm_num_classes'],
-                        num_epochs=self.parameters['lstm_epochs'], splits=self.splits, lr=self.parameters['lstm_lr'])
+        LSTMP = RunLSTM(parameters=self.parameters,
+                        data_flag='lambeq_default_data',
+                        splits=self.splits
+                        )
         LSTMP.train()
 
     def run_lstm_on_news(self):
         # run LSTM on news data
-        LSTMP = RunLSTM(embedding_dim=self.parameters['lstm_embedding_dim'], data_flag='news_data', vocab_size=self.parameters['lstm_vocab_size'],
-                        batch_size=self.parameters['lstm_batch_size'], hidden_dim=self.parameters['lstm_hidden_dim'], num_classes=self.parameters['lstm_num_classes'],
-                        num_epochs=self.parameters['lstm_epochs'], splits=self.split, lr=self.parameters['lstm_lr'])
+        LSTMP = RunLSTM(parameters=self.parameters,
+                        data_flag='news_data',
+                        splits=self.splits
+                        )
         LSTMP.train()
 
     def run_main(self):
