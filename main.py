@@ -24,7 +24,7 @@ def get_args():
     parser = argparse.ArgumentParser(description="Parameters For Neural Nets")
     # which models and datasets to run
     parser.add_argument('--flag_for_lambeq_default', type=bool, default=False)
-    parser.add_argument('--flag_for_lambeq_news', type=bool, default=True)
+    parser.add_argument('--flag_for_lambeq_news', type=bool, default=False)
     parser.add_argument('--flag_for_lstm_default', type=bool, default=False)
     parser.add_argument('--flag_for_lstm_news', type=bool, default=False)
     # for the lambeq model
