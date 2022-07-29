@@ -7,7 +7,7 @@ class DataSets:
         self.data = {'train': {}, 'dev': {}, 'test': {}}
 
     def get_default_lambeq_data(self):
-        """ Text Classification
+        """ The default data set from the lambeq GitHub repo (binary-classes)
         """
         # explicitly specify the data
         data_paths = ['datasets/mc_train_data.txt', 'datasets/mc_dev_data.txt', 'datasets/mc_test_data.txt']
@@ -23,7 +23,7 @@ class DataSets:
         self.convert_dict_to_csv(path_for_csv='datasets/mc_full_data.csv')
 
     def get_news_data(self):
-        """ Text Classification
+        """ News data with news titles and texts (binary-classes)
         """
         # read the data from .csv file
         data_paths = ['datasets/news_classification_true_false/train.csv',
@@ -37,6 +37,23 @@ class DataSets:
         self.convert_dict_to_csv(path_for_csv='datasets/news_classification_true_false/full.csv')
 
     def place_data_in_dict(self, path, labels, text):
+        """
+        Places the texts and labels from dataset into a dictionary for lambeq to properly process it
+
+        Parameters
+        ----------
+        path : str
+            Path to the original location of the dataset
+        labels : list
+            Labels for the text
+        text : list
+            Pieces of text
+
+        Returns
+        -------
+        self.data[train or val or test][labels or text] : dict (side-effect)
+            Dictionary containing the texts and labels for each dataset split
+        """
         # clean the text
         [string.replace('"', '') for string in text]
         [string.replace("'", "") for string in text]
@@ -56,6 +73,19 @@ class DataSets:
         self.data[key]['text'] = text.tolist()
 
     def convert_dict_to_csv(self, path_for_csv):
+        """
+        Converts the self.data dictionary to a CSV at the specified path
+
+        Parameters
+        ----------
+        path_for_csv : str
+            Specified path to save the .CSV file to
+
+        Returns
+        -------
+        file : .CSV (side-effect)
+            A .CSV file is saved to the specified path
+        """
         full_text, full_labels = [], []
         for split in self.data.keys():
             full_text.extend(self.data[split]['text'])

@@ -20,13 +20,15 @@ class LambeqProcesses(object):
         self.model = TketModel
         self.loss_function = lambda y_hat, y: -np.sum(y * np.log(y_hat)) / len(y)  # binary cross-entropy loss
         self.acc_function = lambda y_hat, y: np.sum(np.round(y_hat) == y) / len(y) / 2  # half due to double-counting
-        self.epochs = parameters['lambeq_epochs']
+        self.num_epochs = parameters['lambeq_epochs']
         self.optimizer = SPSAOptimizer
         self.batch_size = parameters['lambeq_batch_size']
         self.dataset = dataset
         self.data_flag = data_flag
 
     def train(self):
+        """ Main function for running the training process and plotting of the train/eval results
+        """
         # use parser and circuit creator
         self.get_diagram_and_circuit()
         # preparation stuff for training
@@ -38,8 +40,9 @@ class LambeqProcesses(object):
         # clear the run logs generated
         shutil.rmtree('runs', ignore_errors=False, onerror=None)
 
-    # for the parser
     def get_diagram_and_circuit(self):
+        """ Function for generating the tree diagram of the inputted text and translating it to a quantum representation
+        """
         for key in self.dataset.keys():
             raw_diagram = self.reader.sentences2diagrams(self.dataset[key]['text'])
             diagram = [remove_cups(diagram) for diagram in raw_diagram]
@@ -49,8 +52,9 @@ class LambeqProcesses(object):
             self.dataset[key]['diagram'] = diagram
             self.dataset[key]['circuit'] = circuit
 
-    # initializing necessary things for training
     def prep_for_train(self):
+        """ Function for initializing the quantum trainer model and train/val datasets
+        """
         backend_config = {
             'backend': self.backend,
             'compilation': self.backend.default_compilation_pass(2),
@@ -61,9 +65,9 @@ class LambeqProcesses(object):
         trainer = QuantumTrainer(
             model,
             loss_function=self.loss_function,
-            epochs=self.epochs,
+            epochs=self.num_epochs,
             optimizer=self.optimizer,
-            optim_hyperparams={'a': 0.05, 'c': 0.06, 'A': 0.01*self.epochs},
+            optim_hyperparams={'a': 0.05, 'c': 0.06, 'A': 0.01*self.num_epochs},
             evaluate_functions={'acc': self.acc_function},
             evaluate_on_train=True,
             verbose='text',
@@ -75,8 +79,23 @@ class LambeqProcesses(object):
                         shuffle=False)
         return train_dataset, val_dataset, trainer, model
 
-    # getting the plots for model performance on dataset
     def plot_performance(self, trainer, model):
+        """
+        Plots the loss and accuracy of the lambeq model on the training and development datasets
+
+        Parameters
+        ----------
+        trainer : lambeq.QuantumTrainer object
+            The quantum trainer fitted on the training and validation datasets, containing accuracy and loss information
+        model : TketModel object
+            Actual model structure used by the quantum trainer to fit on the train/val datasets
+
+        Returns
+        -------
+        plot : matplotlib.figure (side-effect)
+            Plot figure is saved at /figures/lambeq/{current_date}/loss_acc_{current_time}_lambeq.png containing the
+            loss and accuracy information on the train/dev datasets
+        """
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, sharex=True, sharey='row', figsize=(10, 6))
         ax1.plot(trainer.train_epoch_costs, color='blue')
         ax2.plot(trainer.val_costs, color='red')
@@ -86,18 +105,21 @@ class LambeqProcesses(object):
         ax1.set_title('Training Set'), ax2.set_title('Development Set'), ax3.set_xlabel('Epochs'),
         ax4.set_xlabel('Epochs'), ax1.set_ylabel('Loss'), ax3.set_ylabel('Accuracy')
         plt.suptitle('Loss and Accuracy Performance on Train/Dev Sets', fontweight='bold', fontsize=14)
-        # save everything
-        if os.path.isdir('figures') is False:
-            os.mkdir('figures')
-        if os.path.isdir('figures/lambeq') is False:
-            os.mkdir('figures/lambeq')
+        # get the date and time
         today = date.today()
-        current_date = str(today.strftime("%m/%d/%y")).replace("/", "_")
         now = datetime.now()
+        current_date = str(today.strftime("%m_%d_%y"))
         current_time = str(now.strftime("%H_%M_%S"))
-        if os.path.isdir('figures/lambeq/' + current_date) is False:
-            os.mkdir(f'figures/lambeq/{current_date}')
-        plt.savefig(f'figures/lambeq/{current_date}/loss_acc_{current_time}_{self.data_flag}.png')
+        # get the saving path and check if the directories exist
+        save_path = f'figures/lambeq/{current_date}'
+        save_path_split = list(save_path.split('/'))
+        for i in range(1, len(save_path_split) + 1):
+            directory = "/".join([save_path_split[x] for x in range(i)])
+            if os.path.isdir(directory) is False:
+                os.mkdir(directory)
+        # save the figure
+        plt.savefig(f'{save_path}/epochs_{self.num_epochs}_batch_{self.batch_size}_time_{current_time}_'
+                    f'{self.data_flag}.png')
         test_acc = self.acc_function(model(self.dataset['test']['circuit']), self.dataset['test']['labels'])
         print('Test accuracy:', test_acc)
         plt.show()

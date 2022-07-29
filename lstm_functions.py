@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchtext.legacy.data.field
+from datetime import date, datetime
 from pathlib import Path
 
 
@@ -21,6 +22,19 @@ class LSTMProcesses(nn.Module):
         self.dropout = nn.Dropout(0.3)
 
     def forward(self, text):
+        """
+        Forward propagation of the LSTM
+
+        Parameters
+        ----------
+        text : torch(str)
+            The piece of text fed into the LSTM for a training step
+
+        Returns
+        -------
+        logits : torch.Tensor
+            Logits or probabilities for the input text belonging to each of the classes
+        """
         embedded = self.embedding(text)
         x = self.dropout(embedded)
         output, (hidden, cell) = self.lstm(x)
@@ -55,6 +69,22 @@ class RunLSTM:
         self.train_loss_holder, self.val_acc_holder, self.val_loss_holder = [], [], []
 
     def prep_data(self):
+        """
+        Tokenizes the .CSV data file and splits it into training/validation/test sets as DataLoaders
+
+        Returns
+        -------
+        self.text_tokenizer : torchtext.legacy.data.Field (side-effect)
+            Tokenizer instance for the texts
+        self.label_tokenizer : torchtext.legacy.data.Field (side-effect)
+            Tokenizer instance for the labels
+        self.train_loader : torch.DataLoader (side-effect)
+            Batched training data split
+        self.valid_loader : torch.DataLoader (side-effect)
+            Batched validation data split
+        self.test_loader : torch.DataLoader (side-effect)
+            Batched test data split
+        """
         # tokenize the words
         self.text_tokenizer = torchtext.legacy.data.Field(
             tokenize='spacy',
@@ -92,9 +122,10 @@ class RunLSTM:
             sort_key=lambda x: len(x.text)
         )
 
-    def train(self):
+    def run_lstm(self):
+        """ Main function for running through the training and eval steps + saving best model and plots
+        """
         self.prep_data()
-        # get the number of classes based on train loader
         class_list = []
         [class_list.extend(batch.labels.cpu().detach().numpy()) for batch in self.train_loader]
         output_dim = len(np.unique(np.array(class_list)))
@@ -106,7 +137,23 @@ class RunLSTM:
                               )
         optimizer = torch.optim.Adam(model.parameters(), lr=self.lr)
         model = model.to(self.device)
+        self.train(model=model, optimizer=optimizer)
+        test_acc, test_loss = self.eval(model=self.best_model, data_loader=self.test_loader)
+        print(f'\nFor Best Model, Test Accuracy = {np.round(test_acc, 1)} and Test Loss = {np.round(test_loss, 5)}')
+        self.save_best_model()
+        self.plot_results()
 
+    def train(self, model, optimizer):
+        """
+        Main training loop
+
+        Parameters
+        ----------
+        model : torch.nn.model
+            Pytorch LSTM model
+        optimizer : torch.nn.optimizer
+            Optimizer for updating weights based on calculated loss gradient
+        """
         for epoch in range(1, self.num_epochs+1):
             model.train()
             avg_loss = 0.0
@@ -130,12 +177,25 @@ class RunLSTM:
                     self.best_model = copy.deepcopy(model)
                 print(f'{epoch}/{self.num_epochs} ----> train loss = {np.round(avg_loss, 9)} ----> val loss = {np.round(val_loss, 9)} '
                   f'---> accuracy = {np.round(accuracy, 2)}')
-        test_acc, test_loss = self.eval(model=self.best_model, data_loader=self.test_loader)
-        print(f'\nFor Best Model, Test Accuracy = {np.round(test_acc, 1)} and Test Loss = {np.round(test_loss, 5)}')
-        self.save_best_model()
-        self.plot_results()
 
     def eval(self, model, data_loader):
+        """
+        Evaluation --> both validation and final test on valid_laoder and test_loader respectively
+
+        Parameters
+        ----------
+        model : torch.nn.model
+            Pytorch LSTM model
+        data_loader : torch.DataLoader
+            Either the valid_loader for validation or test_loader for final test
+
+        Returns
+        -------
+        accuracy : float
+            Correctly predicted labels / total number of labels
+        loss : float
+            Cross entropy loss between logits and labels
+        """
         with torch.no_grad():
             correct_pred, total, avg_loss = 0, 0, 0
             for i, (text, labels) in enumerate(data_loader):
@@ -149,15 +209,40 @@ class RunLSTM:
         return (correct_pred.float()/total*100).numpy(), avg_loss
 
     def plot_results(self):
+        """
+        Plotting the final results from training and validation and saving it locally
+
+        Returns
+        -------
+        plot : matplotlib.figure (side-effect)
+            Figure saved locally containing the loss and accuracy for training and validation datasets
+        """
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True, sharey='row', figsize=(10, 6))
         ax1.plot(self.train_loss_holder, color='blue')
         ax2.plot(self.val_loss_holder, color='red')
         ax3.plot(self.val_acc_holder, color='green')
         ax3.set_xlabel('Epochs'), ax1.set_ylabel('Train Loss'), ax2.set_ylabel('Val Loss'), ax3.set_ylabel('Accuracy')
         plt.suptitle('Loss and Accuracy Performance with LSTM', fontweight='bold', fontsize=14)
+        # get the date and time
+        today = date.today()
+        now = datetime.now()
+        current_date = str(today.strftime("%m_%d_%y"))
+        current_time = str(now.strftime("%H_%M_%S"))
+        # get the saving path and check if the directories exist
+        save_path = f'figures/lstm/{current_date}'
+        save_path_split = list(save_path.split('/'))
+        for i in range(1, len(save_path_split)+1):
+            directory = "/".join([save_path_split[x] for x in range(i)])
+            if os.path.isdir(directory) is False:
+                os.mkdir(directory)
+        # save the figure
+        plt.savefig(f'{save_path}/epochs_{self.num_epochs}_lr_{self.lr}_batch_{self.batch_size}_time_{current_time}_'
+                    f'{self.data_flag}.png')
         plt.show()
 
     def save_best_model(self):
+        """ Saves the best performing model (based on validation performance, accuracy by default)
+        """
         name_of_dir = 'best_model'
         path_for_file = Path(f'{name_of_dir}/model.pt')
         if os.path.isdir(name_of_dir) is False:

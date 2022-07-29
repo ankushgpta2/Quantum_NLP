@@ -14,12 +14,16 @@ except ImportError as e:
 
 # read in parameters
 def get_hyperparams():
+    """ Gets the hyperparameters from the argparser
+    """
     args = get_args().parse_args()
     parameters = vars(args)
     return parameters
 
 
 def get_args():
+    """ Expected args from user and default values associated with them
+    """
     # initialize parser
     parser = argparse.ArgumentParser(description="Parameters For Neural Nets")
     # which models and datasets to run
@@ -59,7 +63,8 @@ class MainRunner:
                        'test': self.parameters['lstm_test_split']}
 
     def run_lambeq_on_default(self):
-        # run lambeq on default data
+        """ Runs the lambeq model on the default data set
+        """
         QP = LambeqProcesses(parameters=self.parameters,
                              dataset=self.default_data_for_lambeq,
                              data_flag='lambeq_default_data'
@@ -67,7 +72,8 @@ class MainRunner:
         QP.train()
 
     def run_lambeq_on_news(self):
-        # run lambeq on news data
+        """ Runs the lambeq model on news data set
+        """
         QP = LambeqProcesses(parameters=self.parameters,
                              dataset=self.news_data_for_lambeq,
                              data_flag='news_data'
@@ -75,7 +81,8 @@ class MainRunner:
         QP.train()
 
     def run_lstm_on_default(self):
-        # run LSTM on default data
+        """ Runs the lstm model on the default data set
+        """
         LSTMP = RunLSTM(parameters=self.parameters,
                         data_flag='lambeq_default_data',
                         splits=self.splits
@@ -83,7 +90,8 @@ class MainRunner:
         LSTMP.train()
 
     def run_lstm_on_news(self):
-        # run LSTM on news data
+        """ Runs the lstm model on the news data set
+        """
         LSTMP = RunLSTM(parameters=self.parameters,
                         data_flag='news_data',
                         splits=self.splits
@@ -91,6 +99,8 @@ class MainRunner:
         LSTMP.train()
 
     def run_main(self):
+        """ Calls the specific function for each model and dataset combination to run
+        """
         if self.parameters['flag_for_lambeq_default'] is True:
             self.run_lambeq_on_default()
 
