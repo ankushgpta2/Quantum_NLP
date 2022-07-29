@@ -36,7 +36,6 @@ class RunLSTM:
         self.vocab_size = parameters['lstm_vocab_size']
         self.batch_size = parameters['lstm_batch_size']
         self.hidden_dim = parameters['lstm_hidden_dim']
-        self.num_classes = parameters['lstm_num_classes']
         self.num_epochs = parameters['lstm_epochs']
         self.lr = parameters['lstm_lr']
         self.data_flag = data_flag
@@ -66,7 +65,6 @@ class RunLSTM:
         if self.data_flag == 'lambeq_default_data':
             path = 'datasets/mc_full_data.csv'
         else:
-            # TODO: need to double check that the fields above captures column names properly in this CV
             path = 'datasets/news_classification_true_false/full.csv'
 
         dataset = torchtext.legacy.data.TabularDataset(
@@ -96,11 +94,15 @@ class RunLSTM:
 
     def train(self):
         self.prep_data()
+        # get the number of classes based on train loader
+        class_list = []
+        [class_list.extend(batch.labels.cpu().detach().numpy()) for batch in self.train_loader]
+        output_dim = len(np.unique(np.array(class_list)))
         # for the model itself
         model = LSTMProcesses(input_dim=len(self.text_tokenizer.vocab),
                               embedding_dim=self.embedding_dim,
                               hidden_dim=self.hidden_dim,
-                              output_dim=self.num_classes
+                              output_dim=output_dim,
                               )
         optimizer = torch.optim.Adam(model.parameters(), lr=self.lr)
         model = model.to(self.device)

@@ -24,8 +24,8 @@ def get_args():
     parser = argparse.ArgumentParser(description="Parameters For Neural Nets")
     # which models and datasets to run
     parser.add_argument('--flag_for_lambeq_default', type=bool, default=False)
-    parser.add_argument('--flag_for_lambeq_news', type=bool, default=False)
-    parser.add_argument('--flag_for_lstm_default', type=bool, default=True)
+    parser.add_argument('--flag_for_lambeq_news', type=bool, default=True)
+    parser.add_argument('--flag_for_lstm_default', type=bool, default=False)
     parser.add_argument('--flag_for_lstm_news', type=bool, default=False)
     # for the lambeq model
     parser.add_argument('--lambeq_batch_size', type=int, default=16)
@@ -36,7 +36,6 @@ def get_args():
     parser.add_argument('--lstm_embedding_dim', type=int, default=10)
     parser.add_argument('--lstm_vocab_size', type=int, default=20000)
     parser.add_argument('--lstm_hidden_dim', type=int, default=256)
-    parser.add_argument('--lstm_num_classes', type=int, default=2)
     parser.add_argument('--lstm_train_split', type=float, default=0.7)
     parser.add_argument('--lstm_val_split', type=float, default=0.2)
     parser.add_argument('--lstm_test_split', type=float, default=0.1)
