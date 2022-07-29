@@ -1,2 +1,3 @@
-# Quantum_NLP
-Firm Intiative for Exploring Lambeq Quantum NLP vs Traditional Models on Different NLP Tasks
+# Quantum NLP
+Firm Intiative for Exploring Lambeq QML vs Traditional ML Models on Different NLP Tasks
+
