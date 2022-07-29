@@ -93,7 +93,7 @@ class RunLSTM:
         self.label_tokenizer = torchtext.legacy.data.LabelField(dtype=torch.long)
         fields = [('text', self.text_tokenizer), ('labels', self.label_tokenizer)]
         if self.data_flag == 'lambeq_default_data':
-            path = 'datasets/mc_full_data.csv'
+            path = 'datasets/lambeq_default_data/mc_full_data.csv'
         else:
             path = 'datasets/news_classification_true_false/full.csv'
 

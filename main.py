@@ -87,7 +87,7 @@ class MainRunner:
                         data_flag='lambeq_default_data',
                         splits=self.splits
                         )
-        LSTMP.train()
+        LSTMP.run_lstm()
 
     def run_lstm_on_news(self):
         """ Runs the lstm model on the news data set
@@ -96,7 +96,7 @@ class MainRunner:
                         data_flag='news_data',
                         splits=self.splits
                         )
-        LSTMP.train()
+        LSTMP.run_lstm()
 
     def run_main(self):
         """ Calls the specific function for each model and dataset combination to run

@@ -10,7 +10,8 @@ class DataSets:
         """ The default data set from the lambeq GitHub repo (binary-classes)
         """
         # explicitly specify the data
-        data_paths = ['datasets/mc_train_data.txt', 'datasets/mc_dev_data.txt', 'datasets/mc_test_data.txt']
+        data_paths = ['datasets/lambeq_default_data/mc_train_data.txt', 'datasets/lambeq_default_data/mc_dev_data.txt',
+                      'datasets/lambeq_default_data/mc_test_data.txt']
         for path in data_paths:
             labels, sentences = [], []
             with open(path) as f:
@@ -20,7 +21,7 @@ class DataSets:
                     sentences.append(line[1:].strip())
             self.place_data_in_dict(path=path, labels=labels, text=sentences)
 
-        self.convert_dict_to_csv(path_for_csv='datasets/mc_full_data.csv')
+        self.convert_dict_to_csv(path_for_csv='datasets/lambeq_default_data/mc_full_data.csv')
 
     def get_news_data(self):
         """ News data with news titles and texts (binary-classes)
