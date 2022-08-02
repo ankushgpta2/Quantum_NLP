@@ -35,10 +35,15 @@ class LSTMProcesses(nn.Module):
         logits : torch.Tensor
             Logits or probabilities for the input text belonging to each of the classes
         """
+        # embedding the texts... structuring the latent space based on specific input text properties
         embedded = self.embedding(text)
+        # running the embedded representation to a dropout layer (for preventing overfitting)
         x = self.dropout(embedded)
+        # pass the dropout output to a LSTM
         output, (hidden, cell) = self.lstm(x)
+        # get rid of redundant dimension
         hidden.squeeze_(0)
+        # pass the output from LSTM to linear activation layer
         logits = self.fc(hidden)
         return logits
 
@@ -175,8 +180,8 @@ class RunLSTM:
                     self.best_acc = accuracy
                     self.best_epoch = epoch
                     self.best_model = copy.deepcopy(model)
-                print(f'{epoch}/{self.num_epochs} ----> train loss = {np.round(avg_loss, 9)} ----> val loss = {np.round(val_loss, 9)} '
-                  f'---> accuracy = {np.round(accuracy, 2)}')
+                print(f'{epoch}/{self.num_epochs} ----> train loss = {np.round(avg_loss, 9)} ----> val loss = '
+                      f'{np.round(val_loss, 9)} ----> accuracy = {np.round(accuracy, 2)}')
 
     def eval(self, model, data_loader):
         """
@@ -235,6 +240,7 @@ class RunLSTM:
             directory = "/".join([save_path_split[x] for x in range(i)])
             if os.path.isdir(directory) is False:
                 os.mkdir(directory)
+                os.chmod(directory, stat.S_IRWXO)
         # save the figure
         plt.savefig(f'{save_path}/epochs_{self.num_epochs}_lr_{self.lr}_batch_{self.batch_size}_time_{current_time}_'
                     f'{self.data_flag}.png')

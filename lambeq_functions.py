@@ -30,40 +30,68 @@ class LambeqProcesses(object):
         """ Main function for running the training process and plotting of the train/eval results
         """
         # use parser and circuit creator
-        self.get_diagram_and_circuit()
+        train_dataset, val_dataset = self.get_diagram_and_circuit()
         # preparation stuff for training
-        train_dataset, val_dataset, trainer, model = self.prep_for_train()
+        trainer = self.prep_for_train()
         # run the training on generated circuit representations + labels
         trainer.fit(train_dataset, val_dataset, logging_step=1)
         # plot the performance
-        self.plot_performance(trainer, model)
+        self.plot_performance(trainer, self.model)
         # clear the run logs generated
         shutil.rmtree('runs', ignore_errors=False, onerror=None)
 
     def get_diagram_and_circuit(self):
-        """ Function for generating the tree diagram of the inputted text and translating it to a quantum representation
+        """
+        Function for generating the tree diagram of the inputted text and translating it to a quantum representation
+
+        Returns
+        -------
+        train_dataset : lambeq.Dataset
+            Batched dataset based on the circuit representation of the training text
+        val_dataset : lambeq.Dataset
+            Batched dataset based on the circuit representation of the validation text
         """
         for key in self.dataset.keys():
+            # generate the raw diagram tree for all the text
             raw_diagram = self.reader.sentences2diagrams(self.dataset[key]['text'])
+            # removing the cups from the diagram
             diagram = [remove_cups(diagram) for diagram in raw_diagram]
+            # quantum representation or circuit constructed from the tree diagram
             circuit = [self.ansatz(sub_diagram) for sub_diagram in diagram]
             # diagram[0].draw()
             # circuit[0].draw()
+            # save the diagram and circuit representations of the text under separate keys within self.dataset dict
             self.dataset[key]['diagram'] = diagram
             self.dataset[key]['circuit'] = circuit
+        # get the training dataset and validation dataset
+        train_dataset = Dataset(self.dataset['train']['circuit'], self.dataset['train']['labels'],
+                                batch_size=self.batch_size)
+        val_dataset = Dataset(self.dataset['dev']['circuit'], self.dataset['dev']['labels'],
+                                batch_size=self.batch_size)
+        return train_dataset, val_dataset
 
     def prep_for_train(self):
-        """ Function for initializing the quantum trainer model and train/val datasets
         """
+        Function for initializing the quantum trainer model and train/val datasets
+
+        Returns
+        -------
+        trainer : lambeq.QuantumTrainer
+            Actual model for training, utilizing specified backend configuration and other hyperparameters (epochs,
+            loss function, optimizer, and evaluate function)
+        """
+        # set up the backend configurator for the model
         backend_config = {
             'backend': self.backend,
             'compilation': self.backend.default_compilation_pass(2),
             'shots': 8192
         }
-        model = self.model.from_diagrams(self.dataset['train']['circuit']+self.dataset['dev']
+        # set up the final model using TketModel
+        self.model = self.model.from_diagrams(self.dataset['train']['circuit']+self.dataset['dev']
                         ['circuit']+self.dataset['test']['circuit'], backend_config=backend_config)
+        # set up the final quantum trainer, using the model initialized above, with necessary hyperparameters
         trainer = QuantumTrainer(
-            model,
+            self.model,
             loss_function=self.loss_function,
             epochs=self.num_epochs,
             optimizer=self.optimizer,
@@ -73,11 +101,7 @@ class LambeqProcesses(object):
             verbose='text',
             seed=0
         )
-        train_dataset = Dataset(self.dataset['train']['circuit'], self.dataset['train']['labels'],
-                        batch_size=self.batch_size)
-        val_dataset = Dataset(self.dataset['dev']['circuit'], self.dataset['dev']['labels'],
-                        shuffle=False)
-        return train_dataset, val_dataset, trainer, model
+        return trainer
 
     def plot_performance(self, trainer, model):
         """
