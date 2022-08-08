@@ -51,7 +51,7 @@ class LambeqProcesses(object):
         val_dataset : lambeq.Dataset
             Batched dataset based on the circuit representation of the validation text
         """
-        for key in self.dataset.keys():
+        for key in ['train', 'dev', 'test']:
             # generate the raw diagram tree for all the text
             raw_diagram = self.reader.sentences2diagrams(self.dataset[key]['text'])
             # removing the cups from the diagram
