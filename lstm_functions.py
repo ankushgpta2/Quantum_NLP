@@ -72,7 +72,8 @@ class RunLSTM:
         self.best_model = None
         self.best_acc = 0.0
         self.best_epoch = None
-        self.train_loss_holder, self.val_acc_holder, self.val_loss_holder = [], [], []
+        self.metrics = {'val_acc': [], 'val_loss': [], 'train_loss': []}
+        self.thresholds = np.arange(0.0, 1.01, 0.2)
 
     def prep_data(self):
         """
@@ -167,18 +168,16 @@ class RunLSTM:
                 loss.backward()
                 optimizer.step()
                 avg_loss += loss.item()
-            self.train_loss_holder.append(avg_loss)
+            self.metrics['train_loss'].append(avg_loss)
             # perform validation after each epoch
             with torch.set_grad_enabled(False):
                 accuracy, val_loss = self.eval(model=model, data_loader=self.valid_loader)
-                self.val_acc_holder.append(accuracy)
-                self.val_loss_holder.append(val_loss)
                 if accuracy > self.best_acc:
                     self.best_acc = accuracy
                     self.best_epoch = epoch
                     self.best_model = copy.deepcopy(model)
-                print(f'{epoch}/{self.num_epochs} ----> train loss = {np.round(avg_loss, 9)} ----> val loss = '
-                      f'{np.round(val_loss, 9)} ----> accuracy = {np.round(accuracy, 2)}')
+                print(f'{epoch}/{self.num_epochs} ----> train loss = {np.round(avg_loss, 4)} ----> val loss = '
+                      f'{np.round(val_loss, 4)} ----> accuracy = {np.round(accuracy, 2)}')
 
     def eval(self, model, data_loader):
         """
@@ -200,6 +199,7 @@ class RunLSTM:
         """
         with torch.no_grad():
             correct_pred, total, avg_loss = 0, 0, 0
+            accuracy_holder, val_loss_holder = [], []
             for i, (text, labels) in enumerate(data_loader):
                 text, labels = text.to(self.device), labels.float().to(self.device)
                 logits = model(text)
@@ -208,7 +208,10 @@ class RunLSTM:
                 correct_pred = (predicted_labels == labels).sum()
                 loss = F.cross_entropy(logits, labels.long())
                 avg_loss += loss.item()
-        return (correct_pred.float()/total*100).numpy(), avg_loss
+                accuracy_holder.append((correct_pred.float()/total*100).numpy())
+        self.metrics['val_acc'].append(np.average(accuracy_holder))
+        self.metrics['val_loss'].append(avg_loss)
+        return np.average(accuracy_holder), avg_loss
 
     def plot_results(self):
         """
@@ -220,9 +223,9 @@ class RunLSTM:
             Figure saved locally containing the loss and accuracy for training and validation datasets
         """
         fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True, sharey='row', figsize=(10, 6))
-        ax1.plot(self.train_loss_holder, color='blue')
-        ax2.plot(self.val_loss_holder, color='red')
-        ax3.plot(self.val_acc_holder, color='green')
+        ax1.plot(self.metrics['train_loss'], color='blue')
+        ax2.plot(self.metrics['val_loss'], color='red')
+        ax3.plot(self.metrics['val_acc'], color='green')
         ax3.set_xlabel('Epochs'), ax1.set_ylabel('Train Loss'), ax2.set_ylabel('Val Loss'), ax3.set_ylabel('Accuracy')
         plt.suptitle('Loss and Accuracy Performance with LSTM', fontweight='bold', fontsize=14)
         # get the date and time

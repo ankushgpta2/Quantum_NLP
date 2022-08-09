@@ -29,14 +29,16 @@ def get_args():
     # initialize parser
     parser = argparse.ArgumentParser(description="Parameters For Neural Nets")
     # which models and datasets to run
-    parser.add_argument('--flag_for_lambeq_default', type=bool, default=False) # good
-    parser.add_argument('--flag_for_lambeq_news', type=bool, default=False)
-    parser.add_argument('--flag_for_lstm_default', type=bool, default=False) # good
-    parser.add_argument('--flag_for_lstm_news', type=bool, default=False) # good
-    parser.add_argument('--flag_for_lambeq_corona', type=bool, default=False) # good
-    parser.add_argument('--flag_for_lstm_corona', type=bool, default=False) # good
-    parser.add_argument('--flag_for_lambeq_ecommerce', type=bool, default=True)
-    parser.add_argument('--flag_for_lstm_ecommerce', type=bool, default=False) # good
+    parser.add_argument('--flag_for_lambeq_default', type=bool, default=False)  # good
+    parser.add_argument('--flag_for_lambeq_news', type=bool, default=False)  #TODO: fix issue with lambeq running
+    parser.add_argument('--flag_for_lstm_default', type=bool, default=True)  # good
+    parser.add_argument('--flag_for_lstm_news', type=bool, default=False)  # good
+    parser.add_argument('--flag_for_lambeq_corona', type=bool, default=False)  # good
+    parser.add_argument('--flag_for_lstm_corona', type=bool, default=False)  # good
+    parser.add_argument('--flag_for_lambeq_ecommerce', type=bool, default=False)  #TODO: fix issue with lambeq running
+    parser.add_argument('--flag_for_lstm_ecommerce', type=bool, default=False)  # good
+    parser.add_argument('--flag_for_lambeq_spam', type=bool, default=False)  # good
+    parser.add_argument('--flag_for_lstm_spam', type=bool, default=False)  # good
     # for the lambeq model
     parser.add_argument('--lambeq_batch_size', type=int, default=16)
     parser.add_argument('--lambeq_epochs', type=int, default=5)
@@ -68,6 +70,7 @@ class MainRunner:
         self.lambeq_default_data_path = '/Users/ankushkgupta/Documents/Quantum_NLP/datasets/lambeq_default_data'
         self.coronavirus_tweets_path = '/Users/ankushkgupta/Documents/Quantum_NLP/datasets/coronavirus_tweets'
         self.ecommerce_data_path = '/Users/ankushkgupta/Documents/Quantum_NLP/datasets/eccomerce_data'
+        self.spam_data_path = '/Users/ankushkgupta/Documents/Quantum_NLP/datasets/email_spam'
 
     def run_lambeq_on_default(self):
         """ Runs the lambeq model on the default data set
@@ -110,6 +113,16 @@ class MainRunner:
         QP = LambeqProcesses(parameters=self.parameters,
                              dataset=ecommerce_data,
                              data_flag='ecommerce'
+                             )
+        QP.train()
+
+    def run_lambeq_on_spam(self):
+        D = DataSets(splits=self.splits, model_type='lambeq', path=self.spam_data_path)
+        D.get_email_spam_data()
+        spam_data = D.data
+        QP = LambeqProcesses(parameters=self.parameters,
+                             dataset=spam_data,
+                             data_flag='email_spam'
                              )
         QP.train()
 
@@ -157,6 +170,16 @@ class MainRunner:
                         )
         LSTMP.run_lstm()
 
+    def run_lstm_on_spam(self):
+        D = DataSets(splits=self.splits, model_type='lstm', path=self.spam_data_path)
+        D.get_email_spam_data()
+        LSTMP = RunLSTM(parameters=self.parameters,
+                        data_flag='email_spam',
+                        full_csv_path=os.path.join(self.spam_data_path, 'split_data/full.csv'),
+                        splits=self.splits
+                        )
+        LSTMP.run_lstm()
+
     def run_main(self):
         """ Calls the specific function for each model and dataset combination to run
         """
@@ -183,6 +206,12 @@ class MainRunner:
 
         if self.parameters['flag_for_lstm_ecommerce'] is True:
             self.run_lstm_on_ecommerce()
+
+        if self.parameters['flag_for_lambeq_spam'] is True:
+            self.run_lambeq_on_spam()
+
+        if self.parameters['flag_for_lstm_spam'] is True:
+            self.run_lstm_on_spam()
 
 
 M = MainRunner()

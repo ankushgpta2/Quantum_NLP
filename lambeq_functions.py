@@ -148,3 +148,13 @@ class LambeqProcesses(object):
         print('Test accuracy:', test_acc)
         plt.show()
 
+    def plot_confusion_matrix(self):
+        """
+        :return:
+        """
+
+    def plot_roc_curve(self):
+        """
+        :return:
+        """
+

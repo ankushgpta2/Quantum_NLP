@@ -85,6 +85,19 @@ class DataSets:
             df.to_csv(os.path.join(self.path_to_split, f'{split_type}.csv'), index=False)
         self.check_splits()
 
+    def get_email_spam_data(self):
+        self.handle_split_data_dir()
+        file_list = self.get_relevant_files()
+        for file in file_list:
+            df = self.convert_to_df(path_to_file=os.path.join(self.path_to_original, file))
+            # need to do some pre-processing of the original dataset
+            df = self.convert_text_label_to_num(df, label_col_name='Category', text_col_name='Message')
+            split_type = self.get_split_type(file=file)
+            self.save_to_dict(text=df['text'][:10].tolist(), labels=df['labels'][:10].tolist(), split_type=split_type)
+            df.to_csv(os.path.join(self.path_to_split, f'{split_type}.csv'), index=False)
+            self.expected_files.remove(split_type)
+        self.check_splits()
+
     @staticmethod
     def convert_text_label_to_num(df, label_col_name, text_col_name):
         dictionary = dict.fromkeys([z for z in df[label_col_name].unique()], None)
@@ -92,10 +105,14 @@ class DataSets:
         for key, value in zip(dictionary.keys(), raw_labels):
             dictionary[key] = value
         new_df_dict = {'text': df[text_col_name], 'labels': [dictionary[x] for x in df[label_col_name]]}
-        assert len(new_df_dict['labels']) == len(df[label_col_name])
-        assert [x in range(len(dictionary.keys())) for x in new_df_dict[label_col_name]]
-        df = pd.DataFrame(new_df_dict)
-        return df
+        new_df = pd.DataFrame(new_df_dict)
+        assert len(new_df['labels'].unique()) == len(df[label_col_name].unique())
+        try:
+            assert sum(np.isnan(new_df['labels'])) == 0
+        except ValueError:
+            raise ValueError('List of labels contains a NaN value... check the conversion from categorical label to '
+                             'num function on df')
+        return new_df
 
     def get_relevant_files(self):
         file_list = []
