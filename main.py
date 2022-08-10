@@ -31,14 +31,14 @@ def get_args():
     # which models and datasets to run
     parser.add_argument('--flag_for_lambeq_default', type=bool, default=False)  # good
     parser.add_argument('--flag_for_lambeq_news', type=bool, default=False)  #TODO: fix issue with lambeq running
-    parser.add_argument('--flag_for_lstm_default', type=bool, default=True)  # good
+    parser.add_argument('--flag_for_lstm_default', type=bool, default=False)  #good
     parser.add_argument('--flag_for_lstm_news', type=bool, default=False)  # good
-    parser.add_argument('--flag_for_lambeq_corona', type=bool, default=False)  # good
-    parser.add_argument('--flag_for_lstm_corona', type=bool, default=False)  # good
+    parser.add_argument('--flag_for_lambeq_corona', type=bool, default=True)  # good
+    parser.add_argument('--flag_for_lstm_corona', type=bool, default=True)  # good
     parser.add_argument('--flag_for_lambeq_ecommerce', type=bool, default=False)  #TODO: fix issue with lambeq running
-    parser.add_argument('--flag_for_lstm_ecommerce', type=bool, default=False)  # good
-    parser.add_argument('--flag_for_lambeq_spam', type=bool, default=False)  # good
-    parser.add_argument('--flag_for_lstm_spam', type=bool, default=False)  # good
+    parser.add_argument('--flag_for_lstm_ecommerce', type=bool, default=True)  # good
+    parser.add_argument('--flag_for_lambeq_spam', type=bool, default=True)  # good
+    parser.add_argument('--flag_for_lstm_spam', type=bool, default=True)  # good
     # for the lambeq model
     parser.add_argument('--lambeq_batch_size', type=int, default=16)
     parser.add_argument('--lambeq_epochs', type=int, default=5)

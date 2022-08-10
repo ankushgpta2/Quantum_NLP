@@ -25,6 +25,11 @@ class LambeqProcesses(object):
         self.batch_size = parameters['lambeq_batch_size']
         self.dataset = dataset
         self.data_flag = data_flag
+        # get the date and time
+        today = date.today()
+        now = datetime.now()
+        self.current_date = str(today.strftime("%m_%d_%y"))
+        self.current_time = str(now.strftime("%I_%M_%S_%p"))
 
     def train(self):
         """ Main function for running the training process and plotting of the train/eval results
@@ -37,6 +42,8 @@ class LambeqProcesses(object):
         trainer.fit(train_dataset, val_dataset, logging_step=1)
         # plot the performance
         self.plot_performance(trainer, self.model)
+        # save metadata
+        self.save_metadata_to_text()
         # clear the run logs generated
         shutil.rmtree('runs', ignore_errors=False, onerror=None)
 
@@ -129,24 +136,28 @@ class LambeqProcesses(object):
         ax1.set_title('Training Set'), ax2.set_title('Development Set'), ax3.set_xlabel('Epochs'),
         ax4.set_xlabel('Epochs'), ax1.set_ylabel('Loss'), ax3.set_ylabel('Accuracy')
         plt.suptitle('Loss and Accuracy Performance on Train/Dev Sets', fontweight='bold', fontsize=14)
-        # get the date and time
-        today = date.today()
-        now = datetime.now()
-        current_date = str(today.strftime("%m_%d_%y"))
-        current_time = str(now.strftime("%H_%M_%S"))
         # get the saving path and check if the directories exist
-        save_path = f'figures/lambeq/{current_date}'
+        save_path = f'figures/lambeq/{self.current_date}/{self.current_time}'
         save_path_split = list(save_path.split('/'))
         for i in range(1, len(save_path_split) + 1):
             directory = "/".join([save_path_split[x] for x in range(i)])
             if os.path.isdir(directory) is False:
                 os.mkdir(directory)
         # save the figure
-        plt.savefig(f'{save_path}/epochs_{self.num_epochs}_batch_{self.batch_size}_time_{current_time}_'
-                    f'{self.data_flag}.png')
+        plt.savefig(f'{save_path}/{self.data_flag}.png')
         test_acc = self.acc_function(model(self.dataset['test']['circuit']), self.dataset['test']['labels'])
         print('Test accuracy:', test_acc)
-        plt.show()
+        # plt.show()
+
+    def save_metadata_to_text(self):
+        save_path = f'figures/lambeq/{self.current_date}/{self.current_time}'
+        with open(os.path.join(save_path, 'metadata.txt'), 'w') as f:
+            f.write(f'batch size = {self.batch_size}\n'
+                    f'num epochs = {self.num_epochs}\n'
+                    f'data flag = {self.data_flag}\n'
+                    f'date = {self.current_date}\n'
+                    f'time = {self.current_time}\n'
+                    )
 
     def plot_confusion_matrix(self):
         """

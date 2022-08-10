@@ -74,6 +74,11 @@ class RunLSTM:
         self.best_epoch = None
         self.metrics = {'val_acc': [], 'val_loss': [], 'train_loss': []}
         self.thresholds = np.arange(0.0, 1.01, 0.2)
+        # get the date and time
+        today = date.today()
+        now = datetime.now()
+        self.current_date = str(today.strftime("%m_%d_%y"))
+        self.current_time = str(now.strftime("%I_%M_%S_%p"))
 
     def prep_data(self):
         """
@@ -145,6 +150,7 @@ class RunLSTM:
         print(f'\nFor Best Model, Test Accuracy = {np.round(test_acc, 1)} and Test Loss = {np.round(test_loss, 5)}')
         self.save_best_model()
         self.plot_results()
+        self.save_metadata_to_text()
 
     def train(self, model, optimizer):
         """
@@ -228,13 +234,8 @@ class RunLSTM:
         ax3.plot(self.metrics['val_acc'], color='green')
         ax3.set_xlabel('Epochs'), ax1.set_ylabel('Train Loss'), ax2.set_ylabel('Val Loss'), ax3.set_ylabel('Accuracy')
         plt.suptitle('Loss and Accuracy Performance with LSTM', fontweight='bold', fontsize=14)
-        # get the date and time
-        today = date.today()
-        now = datetime.now()
-        current_date = str(today.strftime("%m_%d_%y"))
-        current_time = str(now.strftime("%H_%M_%S"))
         # get the saving path and check if the directories exist
-        save_path = f'figures/lstm/{current_date}'
+        save_path = f'figures/lstm/{self.current_date}/{self.current_time}'
         save_path_split = list(save_path.split('/'))
         for i in range(1, len(save_path_split)+1):
             directory = "/".join([save_path_split[x] for x in range(i)])
@@ -242,9 +243,8 @@ class RunLSTM:
                 os.mkdir(directory)
                 os.chmod(directory, stat.S_IRWXO)
         # save the figure
-        plt.savefig(f'{save_path}/epochs_{self.num_epochs}_lr_{self.lr}_batch_{self.batch_size}_time_{current_time}_'
-                    f'{self.data_flag}.png')
-        plt.show()
+        plt.savefig(f'{save_path}/{self.data_flag}.png')
+        # plt.show()
 
     def save_best_model(self):
         """ Saves the best performing model (based on validation performance, accuracy by default)
@@ -259,6 +259,21 @@ class RunLSTM:
             assert torch.load(path_for_file)
         except:
             raise ValueError(f'Saved .pt file for best model in {path_for_file} cannot be read back in. Please check.')
+
+    def save_metadata_to_text(self):
+        save_path = f'figures/lstm/{self.current_date}/{self.current_time}'
+        with open(os.path.join(save_path, 'metadata.txt'), 'w') as f:
+            f.write(f'embedding dim = {self.embedding_dim}\n'
+                    f'vocab size = {self.vocab_size}\n'
+                    f'batch size = {self.batch_size}\n'
+                    f'hidden dim = {self.hidden_dim}\n'
+                    f'num epochs = {self.num_epochs}\n'
+                    f'lr = {self.lr}\n'
+                    f'data flag = {self.data_flag}\n'
+                    f'splits = {self.train_split}, {self.val_split}, {self.test_split}\n'
+                    f'date = {self.current_date}\n'
+                    f'time = {self.current_time}\n'
+                    )
 
     def predict_sentiment(self, model, sentence):
         model.eval()
