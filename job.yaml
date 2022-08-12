@@ -28,7 +28,7 @@ spec:
       imagePullSecrets:
       - name: nvcr
       securityContext:
-        runAsUser: 8943938
+        runAsUser: 955604050
         runAsGroup: 955383591
       restartPolicy: Never
       volumes:
