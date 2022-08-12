@@ -79,6 +79,7 @@ class RunLSTM:
         now = datetime.now()
         self.current_date = str(today.strftime("%m_%d_%y"))
         self.current_time = str(now.strftime("%I_%M_%S_%p"))
+        self.save_path = f'figures/lstm/{self.data_flag}/{self.current_date}/{self.current_time}'
 
     def prep_data(self):
         """
@@ -235,15 +236,14 @@ class RunLSTM:
         ax3.set_xlabel('Epochs'), ax1.set_ylabel('Train Loss'), ax2.set_ylabel('Val Loss'), ax3.set_ylabel('Accuracy')
         plt.suptitle('Loss and Accuracy Performance with LSTM', fontweight='bold', fontsize=14)
         # get the saving path and check if the directories exist
-        save_path = f'figures/lstm/{self.current_date}/{self.current_time}'
-        save_path_split = list(save_path.split('/'))
+        save_path_split = list(self.save_path.split('/'))
         for i in range(1, len(save_path_split)+1):
             directory = "/".join([save_path_split[x] for x in range(i)])
             if os.path.isdir(directory) is False:
                 os.mkdir(directory)
                 os.chmod(directory, stat.S_IRWXO)
         # save the figure
-        plt.savefig(f'{save_path}/{self.data_flag}.png')
+        plt.savefig(f'{self.save_path}/loss_acc_figures.png')
         # plt.show()
 
     def save_best_model(self):
@@ -261,8 +261,7 @@ class RunLSTM:
             raise ValueError(f'Saved .pt file for best model in {path_for_file} cannot be read back in. Please check.')
 
     def save_metadata_to_text(self):
-        save_path = f'figures/lstm/{self.current_date}/{self.current_time}'
-        with open(os.path.join(save_path, 'metadata.txt'), 'w') as f:
+        with open(os.path.join(self.save_path, 'metadata.txt'), 'w') as f:
             f.write(f'embedding dim = {self.embedding_dim}\n'
                     f'vocab size = {self.vocab_size}\n'
                     f'batch size = {self.batch_size}\n'

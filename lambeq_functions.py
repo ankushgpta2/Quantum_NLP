@@ -30,6 +30,7 @@ class LambeqProcesses(object):
         now = datetime.now()
         self.current_date = str(today.strftime("%m_%d_%y"))
         self.current_time = str(now.strftime("%I_%M_%S_%p"))
+        self.save_path = f'figures/lambeq/{self.data_flag}/{self.current_date}/{self.current_time}'
 
     def train(self):
         """ Main function for running the training process and plotting of the train/eval results
@@ -137,21 +138,19 @@ class LambeqProcesses(object):
         ax4.set_xlabel('Epochs'), ax1.set_ylabel('Loss'), ax3.set_ylabel('Accuracy')
         plt.suptitle('Loss and Accuracy Performance on Train/Dev Sets', fontweight='bold', fontsize=14)
         # get the saving path and check if the directories exist
-        save_path = f'figures/lambeq/{self.current_date}/{self.current_time}'
-        save_path_split = list(save_path.split('/'))
+        save_path_split = list(self.save_path.split('/'))
         for i in range(1, len(save_path_split) + 1):
             directory = "/".join([save_path_split[x] for x in range(i)])
             if os.path.isdir(directory) is False:
                 os.mkdir(directory)
         # save the figure
-        plt.savefig(f'{save_path}/{self.data_flag}.png')
+        plt.savefig(f'{self.save_path}/loss_acc_figure.png')
         test_acc = self.acc_function(model(self.dataset['test']['circuit']), self.dataset['test']['labels'])
         print('Test accuracy:', test_acc)
         # plt.show()
 
     def save_metadata_to_text(self):
-        save_path = f'figures/lambeq/{self.current_date}/{self.current_time}'
-        with open(os.path.join(save_path, 'metadata.txt'), 'w') as f:
+        with open(os.path.join(self.save_path, 'metadata.txt'), 'w') as f:
             f.write(f'batch size = {self.batch_size}\n'
                     f'num epochs = {self.num_epochs}\n'
                     f'data flag = {self.data_flag}\n'
