@@ -33,11 +33,11 @@ def get_args():
     parser.add_argument('--flag_for_lambeq_news', type=bool, default=False)  #TODO: fix issue with lambeq running
     parser.add_argument('--flag_for_lstm_default', type=bool, default=False)  #good
     parser.add_argument('--flag_for_lstm_news', type=bool, default=False)  # good
-    parser.add_argument('--flag_for_lambeq_corona', type=bool, default=True)  # good
-    parser.add_argument('--flag_for_lstm_corona', type=bool, default=True)  # good
+    parser.add_argument('--flag_for_lambeq_corona', type=bool, default=False)  # good
+    parser.add_argument('--flag_for_lstm_corona', type=bool, default=False)  # good
     parser.add_argument('--flag_for_lambeq_ecommerce', type=bool, default=False)  #TODO: fix issue with lambeq running
-    parser.add_argument('--flag_for_lstm_ecommerce', type=bool, default=True)  # good
-    parser.add_argument('--flag_for_lambeq_spam', type=bool, default=True)  # good
+    parser.add_argument('--flag_for_lstm_ecommerce', type=bool, default=False)  # good
+    parser.add_argument('--flag_for_lambeq_spam', type=bool, default=False)  # good
     parser.add_argument('--flag_for_lstm_spam', type=bool, default=True)  # good
     # for the lambeq model
     parser.add_argument('--lambeq_batch_size', type=int, default=16)
@@ -66,153 +66,49 @@ class MainRunner:
         except ValueError:
             print(f'The split sizes for the dataset must equal to one')
 
-        self.news_data_path = '/Users/ankushkgupta/Documents/Quantum_NLP/datasets/news_classification_true_false'
-        self.lambeq_default_data_path = '/Users/ankushkgupta/Documents/Quantum_NLP/datasets/lambeq_default_data'
-        self.coronavirus_tweets_path = '/Users/ankushkgupta/Documents/Quantum_NLP/datasets/coronavirus_tweets'
-        self.ecommerce_data_path = '/Users/ankushkgupta/Documents/Quantum_NLP/datasets/eccomerce_data'
-        self.spam_data_path = '/Users/ankushkgupta/Documents/Quantum_NLP/datasets/email_spam'
+        self.ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+        self.data_paths = {'news': os.path.join(self.ROOT_DIR, 'datasets/news_classification_true_false'),
+                           'default': os.path.join(self.ROOT_DIR, 'datasets/lambeq_default_data'),
+                           'corona': os.path.join(self.ROOT_DIR, 'datasets/coronavirus_tweets'),
+                           'ecommerce': os.path.join(self.ROOT_DIR, 'datasets/eccomerce_data'),
+                           'spam': os.path.join(self.ROOT_DIR, 'datasets/email_spam'),
+                           }
 
-    def run_lambeq_on_default(self):
-        """ Runs the lambeq model on the default data set
-        """
-        D = DataSets(splits=self.splits, model_type='lambeq', path=self.lambeq_default_data_path)
-        D.get_default_lambeq_data()
-        default_data_for_lambeq = D.data
-        QP = LambeqProcesses(parameters=self.parameters,
-                             dataset=default_data_for_lambeq,
-                             data_flag='lambeq_default_data'
-                             )
-        QP.train()
+    def run_model(self, dataset_key, model_name):
+        # get the dataset
+        D = DataSets(splits=self.splits, model_type=model_name, dataset_name=dataset_key, path=self.data_paths[dataset_key])
+        D.get_dataset()
+        dataset = D.data
 
-    def run_lambeq_on_news(self):
-        """ Runs the lambeq model on news data set
-        """
-        D = DataSets(splits=self.splits, model_type='lambeq', path=self.news_data_path)
-        D.get_news_data()
-        news_data_for_lambeq = D.data
-        QP = LambeqProcesses(parameters=self.parameters,
-                             dataset=news_data_for_lambeq,
-                             data_flag='news_data'
-                             )
-        QP.train()
+        # run the appropriate model
+        if model_name == 'lambeq':
+            QP = LambeqProcesses(parameters=self.parameters,
+                                 dataset=dataset,
+                                 data_flag=dataset_key,
+                                 )
+            QP.train()
 
-    def run_lambeq_on_corona(self):
-        D = DataSets(splits=self.splits, model_type='lambeq', path=self.coronavirus_tweets_path)
-        D.get_coronavirus_tweet_data()
-        coronavirus_tweets = D.data
-        QP = LambeqProcesses(parameters=self.parameters,
-                             dataset=coronavirus_tweets,
-                             data_flag='coronavirus_tweets'
-                             )
-        QP.train()
-
-    def run_lambeq_on_ecommerce(self):
-        D = DataSets(splits=self.splits, model_type='lambeq', path=self.ecommerce_data_path)
-        D.get_ecommerce_data()
-        ecommerce_data = D.data
-        QP = LambeqProcesses(parameters=self.parameters,
-                             dataset=ecommerce_data,
-                             data_flag='ecommerce'
-                             )
-        QP.train()
-
-    def run_lambeq_on_spam(self):
-        D = DataSets(splits=self.splits, model_type='lambeq', path=self.spam_data_path)
-        D.get_email_spam_data()
-        spam_data = D.data
-        QP = LambeqProcesses(parameters=self.parameters,
-                             dataset=spam_data,
-                             data_flag='email_spam'
-                             )
-        QP.train()
-
-    def run_lstm_on_default(self):
-        """ Runs the lstm model on the default data set
-        """
-        D = DataSets(splits=self.splits, model_type='lstm', path=self.lambeq_default_data_path)
-        D.get_default_lambeq_data()
-        LSTMP = RunLSTM(parameters=self.parameters,
-                        data_flag='lambeq_default_data',
-                        full_csv_path=os.path.join(self.lambeq_default_data_path, 'split_data/full.csv'),
-                        splits=self.splits
-                        )
-        LSTMP.run_lstm()
-
-    def run_lstm_on_news(self):
-        """ Runs the lstm model on the news data set
-        """
-        D = DataSets(splits=self.splits, model_type='lstm', path=self.news_data_path)
-        D.get_news_data()
-        LSTMP = RunLSTM(parameters=self.parameters,
-                        data_flag='news_data',
-                        full_csv_path=os.path.join(self.news_data_path, 'split_data/full.csv'),
-                        splits=self.splits
-                        )
-        LSTMP.run_lstm()
-
-    def run_lstm_on_corona(self):
-        D = DataSets(splits=self.splits, model_type='lstm', path=self.coronavirus_tweets_path)
-        D.get_coronavirus_tweet_data()
-        LSTMP = RunLSTM(parameters=self.parameters,
-                        data_flag='coronavirus_tweets',
-                        full_csv_path=os.path.join(self.coronavirus_tweets_path, 'split_data/full.csv'),
-                        splits=self.splits
-                        )
-        LSTMP.run_lstm()
-
-    def run_lstm_on_ecommerce(self):
-        D = DataSets(splits=self.splits, model_type='lstm', path=self.ecommerce_data_path)
-        D.get_ecommerce_data()
-        LSTMP = RunLSTM(parameters=self.parameters,
-                        data_flag='ecommerce',
-                        full_csv_path=os.path.join(self.ecommerce_data_path, 'split_data/full.csv'),
-                        splits=self.splits
-                        )
-        LSTMP.run_lstm()
-
-    def run_lstm_on_spam(self):
-        D = DataSets(splits=self.splits, model_type='lstm', path=self.spam_data_path)
-        D.get_email_spam_data()
-        LSTMP = RunLSTM(parameters=self.parameters,
-                        data_flag='email_spam',
-                        full_csv_path=os.path.join(self.spam_data_path, 'split_data/full.csv'),
-                        splits=self.splits
-                        )
-        LSTMP.run_lstm()
+        elif model_name == 'lstm':
+            LSTMP = RunLSTM(parameters=self.parameters,
+                            data_flag=dataset_key,
+                            full_csv_path=os.path.join(self.data_paths[dataset_key], 'split_data/full.csv'),
+                            splits=self.splits
+                            )
+            LSTMP.run_lstm()
 
     def run_main(self):
-        """ Calls the specific function for each model and dataset combination to run
-        """
-        if self.parameters['flag_for_lambeq_default'] is True:
-            self.run_lambeq_on_default()
+        keys = [x for x in self.parameters.keys() if 'flag' in x]
+        vals = [self.parameters[y] for y in keys]
+        condition_checks = {}
+        
+        for x, y in zip(keys, vals): 
+            condition_checks[x] = y
 
-        if self.parameters['flag_for_lambeq_news'] is True:
-            self.run_lambeq_on_news()
-
-        if self.parameters['flag_for_lstm_default'] is True:
-            self.run_lstm_on_default()
-
-        if self.parameters['flag_for_lstm_news'] is True:
-            self.run_lstm_on_news()
-
-        if self.parameters['flag_for_lstm_corona'] is True:
-            self.run_lstm_on_corona()
-
-        if self.parameters['flag_for_lambeq_corona'] is True:
-            self.run_lambeq_on_corona()
-
-        if self.parameters['flag_for_lambeq_ecommerce'] is True:
-            self.run_lambeq_on_ecommerce()
-
-        if self.parameters['flag_for_lstm_ecommerce'] is True:
-            self.run_lstm_on_ecommerce()
-
-        if self.parameters['flag_for_lambeq_spam'] is True:
-            self.run_lambeq_on_spam()
-
-        if self.parameters['flag_for_lstm_spam'] is True:
-            self.run_lstm_on_spam()
-
+        # call appropriate model for dataset
+        for flag in condition_checks.keys():
+            if condition_checks[flag] is True:
+                print(f'\n********** Running {flag.split("_")[-2]} on {flag.split("_")[-1]} ***********\n')
+                self.run_model(dataset_key=flag.split("_")[-1], model_name=flag.split("_")[-2])
 
 M = MainRunner()
 M.run_main()

@@ -8,7 +8,7 @@ from sklearn.model_selection import train_test_split
 
 
 class DataSets:
-    def __init__(self, splits, model_type, path):
+    def __init__(self, splits, model_type, dataset_name, path):
         # initializing the dictionary structure for storing training/validation/test sets
         self.data = {'full': {}, 'train': {}, 'dev': {}, 'test': {}}
         # initializing the wanted splits for training/validation/test (based on the lstm splits, so that lambeq is same)
@@ -19,83 +19,59 @@ class DataSets:
         self.model_type = model_type
         self.relevant_file_names = ['train', 'training', 'Train', 'Training', 'dev', 'val', 'validation', 'valid',
                                'test', 'full', 'total', 'pooled', 'complete', 'main', 'central']
+        self.dataset_name = dataset_name
         self.path = path
         self.path_to_original = os.path.join(self.path, 'original_data')
         self.path_to_split = os.path.join(self.path, 'split_data')
         self.expected_files = ['train', 'dev', 'test', 'full']
         self.num_files_in_original = len(os.listdir(self.path_to_original))
 
-    def get_default_lambeq_data(self):
-        """ The default data set from the lambeq GitHub repo (binary-classes)
-        """
-        self.handle_split_data_dir()
+    def get_dataset(self):
+        if self.dataset_name == 'news':
+            self.general_retrieval()
 
+        if self.dataset_name == 'default':
+            self.general_retrieval()
+
+        if self.dataset_name == 'corona':
+            self.general_retrieval(text_col_name='OriginalTweet', label_col_name='Sentiment')
+
+        if self.dataset_name == 'ecommerce':
+            self.general_retrieval(switch_cols=True)
+
+        if self.dataset_name == 'spam':
+            self.general_retrieval()
+
+    def general_retrieval(self, switch_cols=False, label_col_name='', text_col_name=''):
+        self.handle_split_data_dir()
         file_list = self.get_relevant_files()
         for file in file_list:
             df = self.convert_to_df(path_to_file=os.path.join(self.path_to_original, file))
+
+            # check if the .csv file only has text and labels cols
+            if len(df.columns) > 2:
+                df = df[[text_col_name, label_col_name]]
+
+            # check if the cols are in proper order within .csv file
+            if switch_cols is True:
+                df.columns = ['labels', 'text']
+                df = df[[df.columns[1], df.columns[0]]]
+
+            print(df)
+            # change the names of the columns
+            df.columns = ['text', 'labels']
+
+            # check if the labels column contains nums or words
+            if all(str(label).isdigit() for label in df['labels'].tolist()) is False:
+                print(f'\n********** Converting categorical labels into numerical values ***********\n')
+                df = self.convert_text_label_to_num(df, label_col_name=df.columns[-1], text_col_name=df.columns[0])
+
             split_type = self.get_split_type(file=file)
             self.save_to_dict(text=df['text'].tolist(), labels=df['labels'].tolist(), split_type=split_type)
             df.to_csv(os.path.join(self.path_to_split, f'{split_type}.csv'), index=False)
             self.expected_files.remove(split_type)
-        self.check_splits()
+            print(df)
 
-    def get_news_data(self):
-        """ News data with news titles and texts (binary-classes)
-        """
-        self.handle_split_data_dir()
-
-        file_list = self.get_relevant_files()
-        for file in file_list:
-            df = self.convert_to_df(path_to_file=os.path.join(self.path_to_original, file))
-            split_type = self.get_split_type(file=file)
-            self.save_to_dict(text=df['text'].tolist(), labels=df['labels'].tolist(), split_type=split_type)
-            df.to_csv(os.path.join(self.path_to_split, f'{split_type}.csv'), index=False)
-            self.expected_files.remove(split_type)
-        self.check_splits()
-
-    def get_coronavirus_tweet_data(self):
-        self.handle_split_data_dir()
-
-        # need to do pre-processing of the original dataset
-        file_list = self.get_relevant_files()
-        for file in file_list:
-            df = self.convert_to_df(path_to_file=os.path.join(self.path_to_original, file))
-
-            # need to do some pre-processing of the original dataset
-            df = self.convert_text_label_to_num(df, label_col_name='Sentiment', text_col_name='OriginalTweet')
-
-            split_type = self.get_split_type(file=file)
-            self.save_to_dict(text=df['text'][:100].tolist(), labels=df['labels'][:100].tolist(), split_type=split_type)
-            df.to_csv(os.path.join(self.path_to_split, f'{split_type}.csv'), index=False)
-            self.expected_files.remove(split_type)
-        self.check_splits()
-
-    def get_ecommerce_data(self):
-        self.handle_split_data_dir()
-
-        file_list = self.get_relevant_files()
-        for file in file_list:
-            df = self.convert_to_df(path_to_file=os.path.join(self.path_to_original, file))
-            df.columns = ['labels', 'text']  # ----> in this specific case the columns are not in the proper order
-            df = df.reindex(columns=['text', 'labels'])
-            df = self.convert_text_label_to_num(df, label_col_name='labels', text_col_name='text')
-            df = df[:20] # --> only get the first twenty to run on cpu
-            split_type = self.get_split_type(file=file)
-            self.save_to_dict(text=df['text'].tolist(), labels=df['labels'].tolist(), split_type=split_type)
-            df.to_csv(os.path.join(self.path_to_split, f'{split_type}.csv'), index=False)
-        self.check_splits()
-
-    def get_email_spam_data(self):
-        self.handle_split_data_dir()
-        file_list = self.get_relevant_files()
-        for file in file_list:
-            df = self.convert_to_df(path_to_file=os.path.join(self.path_to_original, file))
-            # need to do some pre-processing of the original dataset
-            df = self.convert_text_label_to_num(df, label_col_name='Category', text_col_name='Message')
-            split_type = self.get_split_type(file=file)
-            self.save_to_dict(text=df['text'][:10].tolist(), labels=df['labels'][:10].tolist(), split_type=split_type)
-            df.to_csv(os.path.join(self.path_to_split, f'{split_type}.csv'), index=False)
-            self.expected_files.remove(split_type)
         self.check_splits()
 
     @staticmethod
