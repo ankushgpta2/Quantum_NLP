@@ -91,7 +91,7 @@ class MainRunner:
         elif model_name == 'lstm':
             LSTMP = RunLSTM(parameters=self.parameters,
                             data_flag=dataset_key,
-                            full_csv_path=os.path.join(self.data_paths[dataset_key], 'split_data/full.csv'),
+                            root_path=self.ROOT_DIR,
                             splits=self.splits
                             )
             LSTMP.run_lstm()

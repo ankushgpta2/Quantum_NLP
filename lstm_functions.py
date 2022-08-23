@@ -49,7 +49,7 @@ class LSTMProcesses(nn.Module):
 
 
 class RunLSTM:
-    def __init__(self, parameters, data_flag, splits, full_csv_path):
+    def __init__(self, parameters, data_flag, splits, root_path):
         # passed in variables
         self.embedding_dim = parameters['lstm_embedding_dim']
         self.vocab_size = parameters['lstm_vocab_size']
@@ -58,7 +58,7 @@ class RunLSTM:
         self.num_epochs = parameters['lstm_epochs']
         self.lr = parameters['lstm_lr']
         self.data_flag = data_flag
-        self.full_csv_path = full_csv_path
+        self.full_csv_path = os.path.join(root_path, 'split_data/full.csv')
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.train_split = splits['train']
         self.val_split = splits['val']
@@ -79,7 +79,7 @@ class RunLSTM:
         now = datetime.now()
         self.current_date = str(today.strftime("%m_%d_%y"))
         self.current_time = str(now.strftime("%I_%M_%S_%p"))
-        self.save_path = f'figures/lstm/{self.data_flag}/{self.current_date}/{self.current_time}'
+        self.save_path = os.path.join(root_path, f'figures/lstm/{self.data_flag}/{self.current_date}/{self.current_time}')
 
     def prep_data(self):
         """
