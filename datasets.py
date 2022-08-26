@@ -17,8 +17,9 @@ class DataSets:
         self.splits_location = None
         # model type
         self.model_type = model_type
-        self.relevant_file_names = ['train', 'training', 'Train', 'Training', 'dev', 'val', 'validation', 'valid',
-                               'test', 'full', 'total', 'pooled', 'complete', 'main', 'central']
+        self.train_file_names = ['train', 'training', 'Train', 'Training']
+        self.valid_file_names = ['dev', 'val', 'validation', 'valid']
+        self.full_file_names = ['full', 'total', 'pooled', 'complete', 'main', 'central']
         self.dataset_name = dataset_name
         self.path = path
         self.path_to_original = os.path.join(self.path, 'original_data')
@@ -37,12 +38,12 @@ class DataSets:
             self.general_retrieval(text_col_name='OriginalTweet', label_col_name='Sentiment')
 
         if self.dataset_name == 'ecommerce':
-            self.general_retrieval(switch_cols=True)
+            self.general_retrieval()
 
         if self.dataset_name == 'spam':
             self.general_retrieval()
 
-    def general_retrieval(self, switch_cols=False, label_col_name='', text_col_name=''):
+    def general_retrieval(self, label_col_name='', text_col_name=''):
         self.handle_split_data_dir()
         file_list = self.get_relevant_files()
         for file in file_list:
@@ -50,27 +51,27 @@ class DataSets:
 
             # check if the .csv file only has text and labels cols
             if len(df.columns) > 2:
+                print(f'\n********** CONVERTING DF WITH >2 COLS TO ONLY TEXT AND LABEL COLS **********\n')
                 df = df[[text_col_name, label_col_name]]
 
             # check if the cols are in proper order within .csv file
-            if switch_cols is True:
+            if sum([len(str(x)) for x in df[df.columns[0]]]) < sum([len(str(x)) for x in df[df.columns[1]]]):
+                print(f'\n********** CHANGING DF COLS TO PROPER ORDER **********\n')
                 df.columns = ['labels', 'text']
                 df = df[[df.columns[1], df.columns[0]]]
 
-            print(df)
             # change the names of the columns
             df.columns = ['text', 'labels']
 
             # check if the labels column contains nums or words
-            if all(str(label).isdigit() for label in df['labels'].tolist()) is False:
-                print(f'\n********** Converting categorical labels into numerical values ***********\n')
+            if all(str(label).isdigit() for label in df['labels'].tolist()) is False and self.model_type != 'lambeq':
+                print(f'\n********** CONVERTING CATEGORICAL LABELS TO NUM **********\n')
                 df = self.convert_text_label_to_num(df, label_col_name=df.columns[-1], text_col_name=df.columns[0])
 
             split_type = self.get_split_type(file=file)
             self.save_to_dict(text=df['text'].tolist(), labels=df['labels'].tolist(), split_type=split_type)
             df.to_csv(os.path.join(self.path_to_split, f'{split_type}.csv'), index=False)
             self.expected_files.remove(split_type)
-            print(df)
 
         self.check_splits()
 
@@ -140,7 +141,9 @@ class DataSets:
             assert (len(glob.glob(os.path.join(self.splits_location, '*.csv')))) == 4
         except AssertionError:
             raise AssertionError('Correct # of .csv files are not inside of the splits directory for dataset...'
-                                 f' assumes files have certain key words in them: {self.relevant_file_names}')
+                                 f' assumes files have certain key words in them: '
+                                 f'{self.train_file_names + self.valid_file_names + self.full_file_names}'
+                                 )
 
     def generate_full_csv(self):
         # create a single csv representing the full dataset
@@ -177,13 +180,13 @@ class DataSets:
         self.data[split_type]['labels'], self.data[split_type]['text'] = labels, text
 
     def get_split_type(self, file):
-        if 'train' in file or 'training' in file or 'Train' in file or 'Training' in file:
+        if True in [x in file for x in self.train_file_names]:
             split_type = 'train'
-        elif 'dev' in file or 'val' in file or 'validation' in file or 'valid' in file:
+        elif True in [x in file for x in self.valid_file_names]:
             split_type = 'dev'
         elif 'test' in file:
             split_type = 'test'
-        elif 'full' in file or 'pooled' in file or 'complete' in file or 'main' in file or 'central' in file:
+        elif True in [x in file for x in self.full_file_names]:
             split_type = 'full'
         else:
             if self.num_files_in_original == 1:
@@ -191,5 +194,7 @@ class DataSets:
                 split_type = 'full'
             else:
                 raise NameError(f'Could not identify which split that file belongs to... assumes file '
-                                              f'name has one of the following words in it: {self.relevant_file_names}')
+                                              f'name has one of the following words in it: '
+                                              f'{self.train_file_names + self.valid_file_names + self.full_file_names}'
+                                )
         return split_type

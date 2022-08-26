@@ -2,16 +2,8 @@ import os
 import argparse
 import numpy as np
 from datasets import DataSets
-from lambeq_functions import LambeqProcesses
-from lstm_functions import RunLSTM
-
-"""
-try:
-    import lightrun
-    lightrun.enable(company_key='ea342b0a-669a-4e63-94f6-1a412dfb2b98')
-except ImportError as e:
-    print("Error importing Lightrun: ", e)
-"""
+from models.lambeq_functions import LambeqProcesses
+from models.lstm_functions import RunLSTM
 
 
 # read in parameters
@@ -28,17 +20,11 @@ def get_args():
     """
     # initialize parser
     parser = argparse.ArgumentParser(description="Parameters For Neural Nets")
-    # which models and datasets to run
-    parser.add_argument('--flag_for_lambeq_default', type=bool, default=False)  # good
-    parser.add_argument('--flag_for_lambeq_news', type=bool, default=False)  #TODO: fix issue with lambeq running
-    parser.add_argument('--flag_for_lstm_default', type=bool, default=True)  #good
-    parser.add_argument('--flag_for_lstm_news', type=bool, default=False)  # good
-    parser.add_argument('--flag_for_lambeq_corona', type=bool, default=False)  # good
-    parser.add_argument('--flag_for_lstm_corona', type=bool, default=False)  # good
-    parser.add_argument('--flag_for_lambeq_ecommerce', type=bool, default=False)  #TODO: fix issue with lambeq running
-    parser.add_argument('--flag_for_lstm_ecommerce', type=bool, default=False)  # good
-    parser.add_argument('--flag_for_lambeq_spam', type=bool, default=False)  # good
-    parser.add_argument('--flag_for_lstm_spam', type=bool, default=False)  # good
+    # which models and datasets to run --> MUST BE EXACT NAMES FROM THIS LIST:
+    # ['news', 'default', 'corona', 'ecommerce', 'spam', 'diabetes']
+    parser.add_argument('--datasets_for_lstm', type=list, default=['default'])
+    parser.add_argument('--datasets_for_lambeq', type=list, default=['default'])
+    parser.add_argument('--datasets_for_hugging_transformer', type=list, default=[])
     # for the lambeq model
     parser.add_argument('--lambeq_batch_size', type=int, default=16)
     parser.add_argument('--lambeq_epochs', type=int, default=5)
@@ -67,11 +53,12 @@ class MainRunner:
             print(f'The split sizes for the dataset must equal to one')
 
         self.ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-        self.data_paths = {'news': os.path.join(self.ROOT_DIR, 'datasets/news_classification_true_false'),
-                           'default': os.path.join(self.ROOT_DIR, 'datasets/lambeq_default_data'),
-                           'corona': os.path.join(self.ROOT_DIR, 'datasets/coronavirus_tweets'),
-                           'ecommerce': os.path.join(self.ROOT_DIR, 'datasets/eccomerce_data'),
-                           'spam': os.path.join(self.ROOT_DIR, 'datasets/email_spam'),
+        self.data_paths = {'news': os.path.join(self.ROOT_DIR, 'datasets/news'),
+                           'default': os.path.join(self.ROOT_DIR, 'datasets/default'),
+                           'corona': os.path.join(self.ROOT_DIR, 'datasets/corona'),
+                           'ecommerce': os.path.join(self.ROOT_DIR, 'datasets/ecommerce'),
+                           'spam': os.path.join(self.ROOT_DIR, 'datasets/spam'),
+                           'diabetes': os.path.join(self.ROOT_DIR, 'datasets/diabetes'),
                            }
 
     def run_model(self, dataset_key, model_name):
@@ -85,7 +72,9 @@ class MainRunner:
             QP = LambeqProcesses(parameters=self.parameters,
                                  dataset=dataset,
                                  data_flag=dataset_key,
+                                 root_path=self.ROOT_DIR,
                                  )
+            print(f'\n********** RUNNING LAMBEQ ON {dataset_key.upper()} ***********\n')
             QP.train()
 
         elif model_name == 'lstm':
@@ -94,21 +83,32 @@ class MainRunner:
                             root_path=self.ROOT_DIR,
                             splits=self.splits
                             )
+            print(f'\n********** RUNNING LSTM ON {dataset_key.upper()} ***********\n')
             LSTMP.run_lstm()
 
+        elif model_name == 'hugging_transformer':
+            """
+            hold
+            """
+
     def run_main(self):
-        keys = [x for x in self.parameters.keys() if 'flag' in x]
-        vals = [self.parameters[y] for y in keys]
-        condition_checks = {}
-        
-        for x, y in zip(keys, vals): 
-            condition_checks[x] = y
+        # check that the dataset names are appropriate
+        dataset_args = [self.parameters['datasets_for_lstm'], self.parameters['datasets_for_lambeq']]
+        for i in range(len(dataset_args)):
+            if len(dataset_args[i]) != 0:
+                for dataset_name in dataset_args[i]:
+                    try:
+                        assert dataset_name in list(self.data_paths.keys())
+                    except ValueError:
+                        raise ValueError(f'{dataset_name} is not a valid dataset name.... must be within this list: '
+                                         f'{list(self.data_paths.keys())}')
 
         # call appropriate model for dataset
-        for flag in condition_checks.keys():
-            if condition_checks[flag] is True:
-                print(f'\n********** Running {flag.split("_")[-2]} on {flag.split("_")[-1]} ***********\n')
-                self.run_model(dataset_key=flag.split("_")[-1], model_name=flag.split("_")[-2])
+        for model in ['lstm', 'lambeq', 'hugging_transformer']:
+            datasets = [x for x in self.parameters.keys() if f'datasets_for_{model}' in x]
+            for dataset in self.parameters[datasets[0]]:
+                self.run_model(dataset_key=dataset, model_name=model)
+
 
 M = MainRunner()
 M.run_main()
