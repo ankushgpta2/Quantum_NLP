@@ -2,6 +2,7 @@ import os
 os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
 os.environ['TOKENIZERS_PARALLELISM'] = 'True'
 import datetime
+import json
 import matplotlib.pyplot as plt
 import numpy as np
 import shutil
@@ -26,12 +27,25 @@ class LambeqProcesses(object):
         self.dataset = dataset
         self.data_flag = data_flag
         self.root_path = root_path
+        self.splits = parameters['lambeq_splits']
         # get the date and time
         today = date.today()
         now = datetime.now()
         self.current_date = str(today.strftime("%m_%d_%y"))
         self.current_time = str(now.strftime("%I_%M_%S_%p"))
-        self.save_path = f'figures/lambeq/{self.data_flag}/{self.current_date}/{self.current_time}'
+        self.save_path = os.path.join(root_path,
+                                      f'results/lambeq/{data_flag}/{self.current_date}/{self.current_time}')
+        self.path_to_figures = os.path.join(self.save_path, 'figures')
+        self.path_to_best_model = os.path.join(self.save_path, 'best_model')
+
+    def run_lambeq(self):
+        trainer = self.train()
+        # plot the performance
+        self.plot_performance(trainer, self.model)
+        # save metadata
+        self.save_metadata_to_json()
+        # clear the run logs generated
+        shutil.rmtree(f'{self.root_path}/runs', ignore_errors=False, onerror=None)
 
     def train(self):
         """ Main function for running the training process and plotting of the train/eval results
@@ -42,12 +56,7 @@ class LambeqProcesses(object):
         trainer = self.prep_for_train()
         # run the training on generated circuit representations + labels
         trainer.fit(train_dataset, val_dataset, logging_step=1)
-        # plot the performance
-        self.plot_performance(trainer, self.model)
-        # save metadata
-        self.save_metadata_to_text()
-        # clear the run logs generated
-        shutil.rmtree(f'{self.root_path}/runs', ignore_errors=False, onerror=None)
+        return trainer
 
     def get_diagram_and_circuit(self):
         """
@@ -139,25 +148,34 @@ class LambeqProcesses(object):
         ax4.set_xlabel('Epochs'), ax1.set_ylabel('Loss'), ax3.set_ylabel('Accuracy')
         plt.suptitle('Loss and Accuracy Performance on Train/Dev Sets', fontweight='bold', fontsize=14)
         # get the saving path and check if the directories exist
-        save_path_split = list(self.save_path.split('/'))
+        save_path_split = list(self.path_to_figures.replace('\\', '/').split('/'))
         for i in range(1, len(save_path_split) + 1):
             directory = "/".join([save_path_split[x] for x in range(i)])
             if os.path.isdir(directory) is False:
                 os.mkdir(directory)
         # save the figure
-        plt.savefig(f'{self.save_path}/loss_acc_figure.png')
+        plt.savefig(f'{self.path_to_figures}/loss_acc_figure.png')
         test_acc = self.acc_function(model(self.dataset['test']['circuit']), self.dataset['test']['labels'])
         print('Test accuracy:', test_acc)
         # plt.show()
 
-    def save_metadata_to_text(self):
-        with open(os.path.join(self.save_path, 'metadata.txt'), 'w') as f:
-            f.write(f'batch size = {self.batch_size}\n'
-                    f'num epochs = {self.num_epochs}\n'
-                    f'data flag = {self.data_flag}\n'
-                    f'date = {self.current_date}\n'
-                    f'time = {self.current_time}\n'
-                    )
+    def save_metadata_to_json(self):
+        config_dict = {
+            'neural_hyperparams': {
+                'batch_size': self.batch_size,
+                'num_epochs': self.num_epochs,
+            },
+            'metadata': {
+                'dataset': self.data_flag,
+                'splits': self.splits,
+                'model': 'lambeq',
+                'date': self.current_date,
+                'time': self.current_time,
+            }
+        }
+        config_file = open(os.path.join(self.save_path, 'meta.json'), "w")
+        json.dump(config_dict, config_file, indent=6)
+        config_file.close()
 
     def plot_confusion_matrix(self):
         """

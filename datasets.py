@@ -13,34 +13,24 @@ class DataSets:
         self.data = {'full': {}, 'train': {}, 'dev': {}, 'test': {}}
         # initializing the wanted splits for training/validation/test (based on the lstm splits, so that lambeq is same)
         self.splits = splits
-        # initialize the location where split files would go
-        self.splits_location = None
-        # model type
+        # initialize necessary paths
+        self.path = path
+        self.splits_location = os.path.join(self.path, 'split_data')
+        self.path_to_original = os.path.join(self.path, 'original_data')
+        # get model and dataset name
         self.model_type = model_type
+        self.dataset_name = dataset_name
+        # get splits information
         self.train_file_names = ['train', 'training', 'Train', 'Training']
         self.valid_file_names = ['dev', 'val', 'validation', 'valid']
         self.full_file_names = ['full', 'total', 'pooled', 'complete', 'main', 'central']
-        self.dataset_name = dataset_name
-        self.path = path
-        self.path_to_original = os.path.join(self.path, 'original_data')
-        self.path_to_split = os.path.join(self.path, 'split_data')
         self.expected_files = ['train', 'dev', 'test', 'full']
         self.num_files_in_original = len(os.listdir(self.path_to_original))
 
     def get_dataset(self):
-        if self.dataset_name == 'news':
-            self.general_retrieval()
-
-        if self.dataset_name == 'default':
-            self.general_retrieval()
-
         if self.dataset_name == 'corona':
             self.general_retrieval(text_col_name='OriginalTweet', label_col_name='Sentiment')
-
-        if self.dataset_name == 'ecommerce':
-            self.general_retrieval()
-
-        if self.dataset_name == 'spam':
+        else:
             self.general_retrieval()
 
     def general_retrieval(self, label_col_name='', text_col_name=''):
@@ -64,13 +54,14 @@ class DataSets:
             df.columns = ['text', 'labels']
 
             # check if the labels column contains nums or words
-            if all(str(label).isdigit() for label in df['labels'].tolist()) is False and self.model_type != 'lambeq':
+            if all(str(label).isdigit() for label in df['labels'].tolist()) is False \
+                and all([isinstance(label, list) for label in df['labels'].tolist()]) is False:
                 print(f'\n********** CONVERTING CATEGORICAL LABELS TO NUM **********\n')
                 df = self.convert_text_label_to_num(df, label_col_name=df.columns[-1], text_col_name=df.columns[0])
 
             split_type = self.get_split_type(file=file)
             self.save_to_dict(text=df['text'].tolist(), labels=df['labels'].tolist(), split_type=split_type)
-            df.to_csv(os.path.join(self.path_to_split, f'{split_type}.csv'), index=False)
+            df.to_csv(os.path.join(self.splits_location, f'{split_type}.csv'), index=False)
             self.expected_files.remove(split_type)
 
         self.check_splits()
@@ -110,7 +101,6 @@ class DataSets:
         os.chmod((os.path.join(self.path, 'split_data')), stat.S_IWRITE)
 
     def check_splits(self):
-        self.splits_location = os.path.join(self.path, 'split_data')
 
         # if only the 'full' dataset is present
         if self.expected_files == ['train', 'dev', 'test'] or self.num_files_in_original == 1:
@@ -163,7 +153,7 @@ class DataSets:
                 for line in f:
                     t = float(line[0])
                     label = [t, 1 - t]
-                    if self.model_type == 'lstm' and len(label) != 1:
+                    if self.model_type == 'lstm' or self.model_type == 'transformer' and len(label) != 1:
                         label = label.index(1.0)
                     data_from_txt['labels'].append(label)
                     data_from_txt['text'].append(line[1:].strip())

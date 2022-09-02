@@ -3,6 +3,7 @@ import stat
 import copy
 import matplotlib.pyplot as plt
 import numpy as np
+import json
 import spacy
 import torch
 import torch.nn as nn
@@ -62,9 +63,9 @@ class RunLSTM:
         self.root_path = root_path
         self.full_csv_path = os.path.join(self.root_path, f'datasets/{data_flag}/split_data/full.csv')
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.train_split = splits['train']
-        self.val_split = splits['val']
-        self.test_split = splits['test']
+        self.train_split = splits['lstm']['train']
+        self.val_split = splits['lstm']['val']
+        self.test_split = splits['lstm']['test']
 
         # just instantiate a few other variables
         self.train_loader = None
@@ -83,7 +84,9 @@ class RunLSTM:
         now = datetime.now()
         self.current_date = str(today.strftime("%m_%d_%y"))
         self.current_time = str(now.strftime("%I_%M_%S_%p"))
-        self.save_path = os.path.join(root_path, f'figures/lstm/{self.data_flag}/{self.current_date}/{self.current_time}')
+        self.save_path = os.path.join(root_path, f'results/lstm/{data_flag}/{self.current_date}/{self.current_time}')
+        self.path_to_figures = os.path.join(self.save_path, 'figures')
+        self.path_to_best_model = os.path.join(self.save_path, 'best_model')
 
     def prep_data(self):
         """
@@ -153,9 +156,9 @@ class RunLSTM:
         self.train(model=model, optimizer=optimizer)
         test_acc, test_loss = self.eval(model=self.best_model, data_loader=self.test_loader)
         print(f'\nFor Best Model, Test Accuracy = {np.round(test_acc, 1)} and Test Loss = {np.round(test_loss, 5)}')
-        self.save_best_model()
         self.plot_results()
-        self.save_metadata_to_text()
+        self.save_best_model()
+        self.save_metadata_to_json()
 
     def train(self, model, optimizer):
         """
@@ -240,43 +243,50 @@ class RunLSTM:
         ax3.set_xlabel('Epochs'), ax1.set_ylabel('Train Loss'), ax2.set_ylabel('Val Loss'), ax3.set_ylabel('Accuracy')
         plt.suptitle('Loss and Accuracy Performance with LSTM', fontweight='bold', fontsize=14)
         # get the saving path and check if the directories exist
-        save_path_split = list(f'figures/lstm/{self.data_flag}/{self.current_date}/{self.current_time}'.split('/'))
+        save_path_split = list(self.path_to_figures.replace('\\', '/').split('/'))
         for i in range(1, len(save_path_split)+1):
             directory = "/".join([save_path_split[x] for x in range(i)])
             if os.path.isdir(directory) is False:
                 os.mkdir(directory)
                 os.chmod(directory, stat.S_IRWXO)
         # save the figure
-        plt.savefig(f'{self.save_path}/loss_acc_figures.png')
+        plt.savefig(f'{self.path_to_figures}/loss_acc_figures.png')
         # plt.show()
 
     def save_best_model(self):
         """ Saves the best performing model (based on validation performance, accuracy by default)
         """
-        name_of_dir = f'{self.root_path}/best_model'
-        path_for_file = Path(f'{name_of_dir}/model.pt')
-        if os.path.isdir(name_of_dir) is False:
-            os.mkdir(name_of_dir)
-            os.chmod(name_of_dir, stat.S_IRWXO)
+        path_for_file = Path(f'{self.path_to_best_model}/best_model.pt')
+        if os.path.isdir(self.path_to_best_model) is False:
+            os.mkdir(self.path_to_best_model)
+            os.chmod(self.path_to_best_model, stat.S_IRWXO)
         torch.save({'acc': self.best_acc, 'epoch': self.best_epoch, 'model': self.best_model}, path_for_file)
         try:
             assert torch.load(path_for_file)
         except:
             raise ValueError(f'Saved .pt file for best model in {path_for_file} cannot be read back in. Please check.')
 
-    def save_metadata_to_text(self):
-        with open(os.path.join(self.save_path, 'metadata.txt'), 'w') as f:
-            f.write(f'embedding dim = {self.embedding_dim}\n'
-                    f'vocab size = {self.vocab_size}\n'
-                    f'batch size = {self.batch_size}\n'
-                    f'hidden dim = {self.hidden_dim}\n'
-                    f'num epochs = {self.num_epochs}\n'
-                    f'lr = {self.lr}\n'
-                    f'data flag = {self.data_flag}\n'
-                    f'splits = {self.train_split}, {self.val_split}, {self.test_split}\n'
-                    f'date = {self.current_date}\n'
-                    f'time = {self.current_time}\n'
-                    )
+    def save_metadata_to_json(self):
+        config_dict = {
+            'neural_hyperparams': {
+                'batch_size': self.batch_size,
+                'num_epochs': self.num_epochs,
+                'embedding_dim': self.embedding_dim,
+                'vocab_size': self.vocab_size,
+                'hidden_dim': self.hidden_dim,
+                'learning_rate': self.lr,
+            },
+            'metadata': {
+                'dataset': self.data_flag,
+                'splits': [self.train_split, self.val_split, self.test_split],
+                'model': 'lstm',
+                'date': self.current_date,
+                'time': self.current_time,
+            }
+        }
+        config_file = open(os.path.join(self.save_path, 'meta.json'), "w")
+        json.dump(config_dict, config_file, indent=6)
+        config_file.close()
 
     def predict_sentiment(self, model, sentence):
         model.eval()
