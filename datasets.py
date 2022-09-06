@@ -8,7 +8,8 @@ from sklearn.model_selection import train_test_split
 
 
 class DataSets:
-    def __init__(self, splits, model_type, dataset_name, path):
+    def __init__(self, splits, model_type, dataset_name, path, parameters):
+        self.parameters = parameters
         # initializing the dictionary structure for storing training/validation/test sets
         self.data = {'full': {}, 'train': {}, 'dev': {}, 'test': {}}
         # initializing the wanted splits for training/validation/test (based on the lstm splits, so that lambeq is same)
@@ -59,12 +60,19 @@ class DataSets:
                 print(f'\n********** CONVERTING CATEGORICAL LABELS TO NUM **********\n')
                 df = self.convert_text_label_to_num(df, label_col_name=df.columns[-1], text_col_name=df.columns[0])
 
+            # get split type
             split_type = self.get_split_type(file=file)
-            self.save_to_dict(text=df['text'].tolist(), labels=df['labels'].tolist(), split_type=split_type)
             df.to_csv(os.path.join(self.splits_location, f'{split_type}.csv'), index=False)
             self.expected_files.remove(split_type)
 
         self.check_splits()
+
+        # check whether to subsample and reduce size of each text sample
+        if self.parameters['subsample'] is True:
+            self.subsample()
+
+        # save to dictionary
+        self.save_to_dict()
 
     @staticmethod
     def convert_text_label_to_num(df, label_col_name, text_col_name):
@@ -81,6 +89,50 @@ class DataSets:
             raise ValueError('List of labels contains a NaN value... check the conversion from categorical label to '
                              'num function on df')
         return new_df
+
+    def subsample(self):
+        # TODO: when doing train/val/test splits on full... need to split WITHIN each class
+        # get the full csv
+        df = self.convert_to_df(os.path.join(self.splits_location, 'full.csv'))
+        # reduce the number of samples --> first split into different classes (keep original class balance)
+        class_holder = {}
+        diff_classes = set(df['labels'].tolist())
+        samples_per_class = self.parameters['abs_num_samples'] // len(diff_classes)
+
+        # get the full modified df
+        for x in diff_classes:
+            class_rows = df.loc[df['labels'] == x]
+            if len(class_rows) > samples_per_class:
+                class_rows = class_rows.sample(n=samples_per_class)
+            reduced_text = [x[:self.parameters['abs_text_size']] if len(x) >
+                                    self.parameters['abs_text_size'] else x for x in class_rows['text'].tolist()]
+            class_holder[str(x)] = [reduced_text, class_rows['labels'].tolist()]
+
+        # create a single df with all the different lists
+        final_text_list, final_labels_list = [], []
+        [final_text_list.extend(class_holder[x][0]) for x in class_holder.keys()]
+        [final_labels_list.extend(class_holder[x][1]) for x in class_holder.keys()]
+        df = pd.DataFrame(list(zip(final_text_list, final_labels_list)), columns=['text', 'labels']).sample(frac=1)
+
+        # now save the dataframes to new .csv files ---> splitting within each class pool
+        df.to_csv(os.path.join(self.splits_location, 'full.csv'), index=False)
+        texts_dict, labels_dict = {'train': [], 'dev': [], 'test': []}, {'train': [], 'dev': [], 'test': []}
+        for x in diff_classes:
+            class_row = df.loc[df['labels'] == x]
+            split_indices = [
+                int(np.floor(self.splits['train']*len(class_row))),
+                int(np.floor((self.splits['train']+self.splits['val'])*len(class_row)))
+            ]
+            class_train, class_dev, class_test = np.split(df.to_numpy(), split_indices)
+            for key, class_text in zip(texts_dict.keys(), [class_train[0], class_dev[0], class_test[0]]):
+                texts_dict[key].extend(class_text)
+            for key, class_labels in zip(labels_dict.keys(), [class_train[1], class_dev[1], class_test[1]]):
+                labels_dict[key].extend(class_labels)
+
+        # now join into a single list for the texts and labels
+        for split_type in ['train', 'dev', 'test']:
+            pd.DataFrame(list(zip(texts_dict[split_type], labels_dict[split_type])), columns=['text', 'labels'])
+            df.to_csv(os.path.join(self.splits_location, f'{split_type}.csv'))
 
     def get_relevant_files(self):
         file_list = []
@@ -143,7 +195,6 @@ class DataSets:
 
     def save_missing_splits(self, split_dict):
         for x, y in zip(split_dict.keys(), split_dict.values()):
-            self.save_to_dict(split_type=x, labels=y['labels'].tolist(), text=y['text'].tolist())
             y.to_csv(os.path.join(self.splits_location, f'{x}.csv'), index=False)
 
     def convert_to_df(self, path_to_file):
@@ -166,8 +217,11 @@ class DataSets:
         df = df.iloc[np.random.permutation(df.index)].reset_index(drop=True)
         return df
 
-    def save_to_dict(self, text, labels, split_type):
-        self.data[split_type]['labels'], self.data[split_type]['text'] = labels, text
+    def save_to_dict(self):
+        for file in ['train', 'dev', 'test', 'full']:
+            df = self.convert_to_df(path_to_file=os.path.join(self.splits_location, f'{file}.csv'))
+            print(np.unique(df['labels'].to_numpy()))
+            self.data[file]['labels'], self.data[file]['text'] = df['labels'].tolist(), df['text'].tolist()
 
     def get_split_type(self, file):
         if True in [x in file for x in self.train_file_names]:

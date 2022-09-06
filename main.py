@@ -35,13 +35,19 @@ def get_args():
                         help='which datasets to run through transformer... must be one of these options:'
                              ' news, default, corona, ecommerce, spam, diabetes'
                         )
+    # general datasets properties
+    parser.add_argument('--subsample', type=bool, default=True, help='whether to subsample large datasets')
+    parser.add_argument('--abs_num_samples', type=int, default=500,
+                        help='how much to subsample datasets with num rows larger than abs_num_samples')
+    parser.add_argument('--abs_text_size', type=int, default=1000,
+                        help='how much to subsample individual sample or text lengths')
     # for the lambeq model
     parser.add_argument('--lambeq_batch_size', type=int, default=16, help='batch size for lambeq model')
     parser.add_argument('--lambeq_epochs', type=int, default=5, help='# of training epochs for lambeq model')
     parser.add_argument('--lambeq_splits', type=list, default=[0.7, 0.2, 0.1], help='splits for lambeq')
     # for the lstm model
     parser.add_argument('--lstm_batch_size', type=int, default=16, help='batch size for lstm model')
-    parser.add_argument('--lstm_epochs', type=int, default=200, help='# of training epochs for lstm model')
+    parser.add_argument('--lstm_epochs', type=int, default=5, help='# of training epochs for lstm model')
     parser.add_argument('--lstm_embedding_dim', type=int, default=512, help='embedding dim for lstm')
     parser.add_argument('--lstm_vocab_size', type=int, default=1024, help='reference corpus')
     parser.add_argument('--lstm_hidden_dim', type=int, default=256, help='# of LSTM units in each layer essentially')
@@ -49,7 +55,7 @@ def get_args():
     parser.add_argument('--lstm_lr', type=float, default=0.0001, help='learning rate for lstm')
     # for the hugging face transformer model
     parser.add_argument('--transformer_batch_size', type=int, default=8, help='batch size for transformer')
-    parser.add_argument('--transformer_epochs', type=int, default=10, help='training epochs for transformer')
+    parser.add_argument('--transformer_epochs', type=int, default=5, help='training epochs for transformer')
     parser.add_argument('--transformer_lr', type=float, default=2e-5, help='learning rate for transformer')
     parser.add_argument('--transformer_weight_decay', type=float, default=0.001,
                         help='how much to decay weights per epoch I think')
@@ -89,7 +95,12 @@ class MainRunner:
 
     def run_model(self, dataset_key, model_name):
         # get the dataset
-        D = DataSets(splits=self.splits[model_name], model_type=model_name, dataset_name=dataset_key, path=self.data_paths[dataset_key])
+        D = DataSets(splits=self.splits[model_name],
+                     model_type=model_name,
+                     dataset_name=dataset_key,
+                     path=self.data_paths[dataset_key],
+                     parameters=self.parameters,
+                     )
         D.get_dataset()
         dataset = D.data
 
@@ -142,6 +153,7 @@ class MainRunner:
                 self.run_model(dataset_key=dataset, model_name=model)
 
 
-M = MainRunner()
-M.run_main()
+if __name__ == '__main__':
+    M = MainRunner()
+    M.run_main()
 
