@@ -1,0 +1,16 @@
+name: lambeq_QML
+channels:
+  - pytorch
+  - conda
+  - defaults
+dependencies:
+  - ipython
+  - python=3.9.0
+  - pytorch=1.9.0
+  - torchvision
+  - pandas
+  - scikit-learn
+  - matplotlib
+  - seaborn
+  - tqdm
+prefix: /Users/ankushgupta/opt/anaconda3/envs/lambeq_QML

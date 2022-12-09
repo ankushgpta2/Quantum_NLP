@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: quantumnlp
+spec:
+  template:
+    spec:
+      containers:
+      - name: quantumnlp
+        image: nvcr.io/nvidia/pytorch:21.12-py3
+        command: ["/home/AD/ankushkgupta/Quantum_NLP/exec.sh"]
+        workingDir: /home/AD/ankushkgupta/Quantum_NLP
+        env:
+          - name: HOME
+            value: /home/AD/ankushkgupta/Quantum_NLP
+        resources:
+          requests:
+            memory: "12Gi"
+            cpu: "2"
+            nvidia.com/gpu: "2"
+          limits:
+            memory: "12Gi"
+            cpu: "2"
+            nvidia.com/gpu: "2"
+        volumeMounts:
+        - mountPath: /home/AD/ankushkgupta/
+          name: homedir
+      imagePullSecrets:
+      - name: nvcr
+      securityContext:
+        runAsUser: 955604050
+        runAsGroup: 955383591
+      restartPolicy: Never
+      volumes:
+      - name: homedir
+        hostPath:
+          path: /home/AD/ankushkgupta/
+          type: Directory
+  backoffLimit: 1
